@@ -1,0 +1,143 @@
+<?php
+/**
+ * Chats List View
+ */
+ob_start();
+?>
+
+<!-- Banner Image -->
+<div class="card shadow mb-4" style="border-radius: 15px; overflow: hidden; border: none;">
+    <div style="position: relative; height: 180px; background: url('../img/pexels-fotoaibe-1669799.jpg') center/cover no-repeat;">
+        <div style="position: absolute; inset: 0; background: linear-gradient(135deg, rgba(111,66,193,0.85), rgba(232,62,140,0.7));"></div>
+        <div style="position: relative; z-index: 1; height: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0 2rem;">
+            <div>
+                <h1 class="h3 mb-1 text-white font-weight-bold">
+                    <i class="fas fa-comments mr-2"></i>Support Chat
+                    <?php if ($unreadCount > 0): ?>
+                    <span class="badge badge-warning ml-2"><?php echo $unreadCount; ?> unread</span>
+                    <?php endif; ?>
+                </h1>
+                <p class="text-white-50 mb-0">Manage customer support conversations</p>
+            </div>
+            <?php if ($unreadCount > 0): ?>
+            <a href="index.php?controller=chat&action=markAllRead" class="btn btn-light btn-sm shadow-sm">
+                <i class="fas fa-check-double mr-1"></i> Mark All Read
+            </a>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card shadow mb-4">
+    <div class="card-body">
+        <div class="btn-group mr-3" role="group">
+            <a href="index.php?controller=chat" class="btn btn-<?php echo !$currentFilter ? 'primary' : 'outline-primary'; ?>">All</a>
+            <a href="index.php?controller=chat&filter=unread" class="btn btn-<?php echo $currentFilter === 'unread' ? 'warning' : 'outline-warning'; ?>">
+                Unread
+                <?php if ($unreadCount > 0): ?>
+                <span class="badge badge-light"><?php echo $unreadCount; ?></span>
+                <?php endif; ?>
+            </a>
+        </div>
+        <form method="GET" class="form-inline d-inline">
+            <input type="hidden" name="controller" value="chat">
+            <div class="form-group mr-2">
+                <input type="text" name="search" class="form-control form-control-sm" placeholder="Search..." 
+                       value="<?php echo htmlspecialchars($search ?? ''); ?>">
+            </div>
+            <button type="submit" class="btn btn-sm btn-primary">
+                <i class="fas fa-search"></i>
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Chats Table -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">
+            <i class="fas fa-comments mr-2"></i>All Conversations
+            <span class="badge badge-primary ml-2"><?php echo count($chats); ?></span>
+        </h6>
+    </div>
+    <div class="card-body">
+        <?php if (empty($chats)): ?>
+        <div class="text-center py-5">
+            <i class="fas fa-comments fa-3x text-gray-300 mb-3"></i>
+            <p class="text-gray-500">No chat messages found.</p>
+        </div>
+        <?php else: ?>
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover" width="100%">
+                <thead class="thead-light">
+                    <tr>
+                        <th width="40"></th>
+                        <th>ID</th>
+                        <th>User</th>
+                        <th>Message Preview</th>
+                        <th>Admin</th>
+                        <th>Date</th>
+                        <th width="120">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($chats as $chat): ?>
+                    <tr class="<?php echo !$chat['readStatus'] ? 'table-warning' : ''; ?>">
+                        <td class="text-center">
+                            <?php if (!$chat['readStatus']): ?>
+                            <i class="fas fa-circle text-warning" title="Unread"></i>
+                            <?php else: ?>
+                            <i class="fas fa-check text-success" title="Read"></i>
+                            <?php endif; ?>
+                        </td>
+                        <td>#<?php echo $chat['chatID']; ?></td>
+                        <td>
+                            <strong><?php echo htmlspecialchars($chat['usersname'] ?? 'Guest'); ?></strong>
+                            <?php if (isset($chat['userEmail'])): ?>
+                            <br><small class="text-muted"><?php echo htmlspecialchars($chat['userEmail']); ?></small>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php 
+                            $message = htmlspecialchars($chat['messages'] ?? '');
+                            echo strlen($message) > 80 ? substr($message, 0, 80) . '...' : $message;
+                            ?>
+                        </td>
+                        <td>
+                            <?php if ($chat['adminName']): ?>
+                            <span class="text-success"><i class="fas fa-user-shield mr-1"></i><?php echo htmlspecialchars($chat['adminName']); ?></span>
+                            <?php else: ?>
+                            <span class="text-muted">Not assigned</span>
+                            <?php endif; ?>
+                        </td>
+                        <td><?php echo date('M d, Y H:i', strtotime($chat['createdDate'])); ?></td>
+                        <td class="table-actions">
+                            <a href="index.php?controller=chat&action=show&id=<?php echo $chat['chatID']; ?>" 
+                               class="btn btn-info btn-sm" title="View">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <?php if (!$chat['readStatus']): ?>
+                            <a href="index.php?controller=chat&action=markRead&id=<?php echo $chat['chatID']; ?>" 
+                               class="btn btn-success btn-sm" title="Mark Read">
+                                <i class="fas fa-check"></i>
+                            </a>
+                            <?php endif; ?>
+                            <a href="#" onclick="confirmDelete('index.php?controller=chat&action=delete&id=<?php echo $chat['chatID']; ?>', 'chat')" 
+                               class="btn btn-danger btn-sm" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<?php
+$content = ob_get_clean();
+include __DIR__ . '/../layouts/admin.php';
+?>

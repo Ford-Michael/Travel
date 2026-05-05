@@ -1,0 +1,30 @@
+# Apache Rewrite Rules
+# Enable mod_rewrite in Apache
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /travel.bling/admin/
+
+    # If the request is not for an existing file
+    RewriteCond %{REQUEST_FILENAME} !-f
+    # If the request is not for an existing directory
+    RewriteCond %{REQUEST_FILENAME} !-d
+    # Rewrite all requests to index.php
+    RewriteRule ^(.*)$ index.php [QSA,L]
+</IfModule>
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# Disable directory browsing
+Options -Indexes
+
+# Protect sensitive files
+<FilesMatch "\.(htaccess|htpasswd|ini|log|sh|sql)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
