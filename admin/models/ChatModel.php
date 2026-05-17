@@ -1,151 +1,155 @@
 <?php
 /**
- * Chat Model
- * Manages Chat/Support message operations
+ * ChatModel
+ * Handles all DB operations for the Chat feature:
+ *  - Broadcasts (Admin → All)
+ *  - Private chat sessions & messages (User ↔ AI / Admin)
  */
 
 require_once __DIR__ . '/Model.php';
 
 class ChatModel extends Model {
-    protected $table = 'Chat';
-    protected $primaryKey = 'chatID';
+    protected $table = 'ChatMessage';
+    protected $primaryKey = 'messageID';
 
-    /**
-     * Get all chats with user details
-     */
-    public function getAllWithDetails() {
-        $sql = "SELECT c.*, u.usersname, u.email as userEmail, a.usersname as adminName
-                FROM {$this->table} c
-                LEFT JOIN Users u ON c.usersID = u.usersID
-                LEFT JOIN Admin a ON c.adminID = a.adminID
-                ORDER BY c.createdDate DESC";
-        $stmt = $this->db->query($sql);
-        return $stmt->fetchAll();
-    }
+    // ─── SESSION ────────────────────────────────────────────
 
-    /**
-     * Get single chat with full details
-     */
-    public function getWithDetails($id) {
-        $sql = "SELECT c.*, u.usersname, u.email as userEmail, u.phoneNumber,
-                       a.usersname as adminName
-                FROM {$this->table} c
-                LEFT JOIN Users u ON c.usersID = u.usersID
-                LEFT JOIN Admin a ON c.adminID = a.adminID
-                WHERE c.chatID = :id";
-        $stmt = $this->query($sql, ['id' => $id]);
-        return $stmt->fetch();
-    }
+    public function getOrCreateSession(int $usersID): string {
+        $stmt = $this->query(
+            'SELECT sessionID FROM ChatSession WHERE usersID = :uid LIMIT 1',
+            ['uid' => $usersID]
+        );
+        $row = $stmt->fetch();
 
-    /**
-     * Get chats by user
-     */
-    public function getByUser($userId) {
-        $sql = "SELECT c.*, a.usersname as adminName
-                FROM {$this->table} c
-                LEFT JOIN Admin a ON c.adminID = a.adminID
-                WHERE c.usersID = :userId
-                ORDER BY c.createdDate DESC";
-        $stmt = $this->query($sql, ['userId' => $userId]);
-        return $stmt->fetchAll();
-    }
-
-    /**
-     * Get unread chats
-     */
-    public function getUnread() {
-        $sql = "SELECT c.*, u.usersname, u.email as userEmail
-                FROM {$this->table} c
-                LEFT JOIN Users u ON c.usersID = u.usersID
-                WHERE c.readStatus = 0
-                ORDER BY c.createdDate DESC";
-        $stmt = $this->db->query($sql);
-        return $stmt->fetchAll();
-    }
-
-    /**
-     * Get unread count
-     */
-    public function getUnreadCount() {
-        $sql = "SELECT COUNT(*) as count FROM {$this->table} WHERE readStatus = 0";
-        $stmt = $this->db->query($sql);
-        $result = $stmt->fetch();
-        return $result['count'];
-    }
-
-    /**
-     * Mark chat as read
-     */
-    public function markAsRead($id) {
-        return $this->update($id, ['readStatus' => 1]);
-    }
-
-    /**
-     * Mark all as read
-     */
-    public function markAllAsRead() {
-        $sql = "UPDATE {$this->table} SET readStatus = 1 WHERE readStatus = 0";
-        $stmt = $this->db->query($sql);
-        return $stmt->rowCount();
-    }
-
-    /**
-     * Add reply to chat
-     */
-    public function addReply($id, $message, $adminId) {
-        $chat = $this->findById($id);
-        if (!$chat) {
-            return false;
+        if ($row) {
+            return $row['sessionID'];
         }
 
-        $existingMessages = $chat['messages'] ?? '';
-        $newMessage = "\n\n[Admin Reply - " . date('Y-m-d H:i:s') . "]\n" . $message;
-        
-        return $this->update($id, [
-            'messages' => $existingMessages . $newMessage,
-            'adminID' => $adminId,
-            'readStatus' => 1
-        ]);
+        $sessionID = bin2hex(random_bytes(32));
+        $this->query(
+            'INSERT INTO ChatSession (sessionID, usersID) VALUES (:sid, :uid)',
+            ['sid' => $sessionID, 'uid' => $usersID]
+        );
+        return $sessionID;
     }
 
-    /**
-     * Create new chat message
-     */
-    public function createMessage($userId, $message, $ipAddress = null) {
-        return $this->create([
-            'usersID' => $userId,
-            'messages' => $message,
-            'readStatus' => 0,
-            'ipAddress' => $ipAddress
-        ]);
+    public function getSessionByUser(int $usersID): ?array {
+        $stmt = $this->query(
+            'SELECT * FROM ChatSession WHERE usersID = :uid LIMIT 1',
+            ['uid' => $usersID]
+        );
+        return $stmt->fetch() ?: null;
+    }
+    
+    public function getSessionByID(string $sessionID): ?array {
+        $stmt = $this->query(
+            'SELECT cs.*, u.usersname, u.email, u.phoneNumber, u.ipAddress 
+             FROM ChatSession cs 
+             JOIN Users u ON cs.usersID = u.usersID
+             WHERE cs.sessionID = :sid LIMIT 1',
+            ['sid' => $sessionID]
+        );
+        return $stmt->fetch() ?: null;
     }
 
-    /**
-     * Search chats
-     */
-    public function search($keyword) {
-        $sql = "SELECT c.*, u.usersname, u.email as userEmail
-                FROM {$this->table} c
-                LEFT JOIN Users u ON c.usersID = u.usersID
-                WHERE c.messages LIKE :keyword 
-                OR u.usersname LIKE :keyword
-                OR u.email LIKE :keyword
-                ORDER BY c.createdDate DESC";
-        $stmt = $this->query($sql, ['keyword' => "%{$keyword}%"]);
+    public function setAdminTakeover(string $sessionID, bool $active): void {
+        $this->query(
+            'UPDATE ChatSession SET adminTookover = :v WHERE sessionID = :sid',
+            ['v' => (int) $active, 'sid' => $sessionID]
+        );
+    }
+
+    // ─── MESSAGES ────────────────────────────────────────────
+
+    public function addMessage(string $sessionID, int $usersID, string $senderType, string $content, ?int $senderID = null): int {
+        $this->query(
+            'INSERT INTO ChatMessage (sessionID, usersID, senderType, senderID, content)
+             VALUES (:sid, :uid, :type, :sender, :content)',
+            [
+                'sid'     => $sessionID,
+                'uid'     => $usersID,
+                'type'    => $senderType,   // 'user' | 'ai' | 'admin'
+                'sender'  => $senderID,
+                'content' => $content,
+            ]
+        );
+        return (int) $this->db->lastInsertId();
+    }
+
+    public function getMessages(string $sessionID, int $limit = 50): array {
+        $stmt = $this->db->prepare(
+            'SELECT cm.*, a.usersname as adminName 
+             FROM ChatMessage cm
+             LEFT JOIN Admin a ON cm.senderID = a.adminID AND cm.senderType = \'admin\'
+             WHERE cm.sessionID = :sid ORDER BY cm.createdAt ASC LIMIT ' . (int) $limit
+        );
+        $stmt->execute(['sid' => $sessionID]);
         return $stmt->fetchAll();
     }
 
-    /**
-     * Get recent chats
-     */
-    public function getRecent($limit = 10) {
-        $sql = "SELECT c.*, u.usersname
-                FROM {$this->table} c
-                LEFT JOIN Users u ON c.usersID = u.usersID
-                ORDER BY c.createdDate DESC
-                LIMIT :limit";
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    public function getMessagesSince(string $sessionID, int $afterID): array {
+        $stmt = $this->db->prepare(
+            'SELECT cm.*, a.usersname as adminName 
+             FROM ChatMessage cm
+             LEFT JOIN Admin a ON cm.senderID = a.adminID AND cm.senderType = \'admin\'
+             WHERE cm.sessionID = :sid AND cm.messageID > :after
+             ORDER BY cm.createdAt ASC'
+        );
+        $stmt->execute(['sid' => $sessionID, 'after' => $afterID]);
+        return $stmt->fetchAll();
+    }
+
+    // ─── BROADCASTS ─────────────────────────────────────────
+
+    public function addBroadcast(int $adminID, string $raw, string $formatted, string $tag = ''): int {
+        $this->query(
+            'INSERT INTO ChatBroadcast (adminID, rawMessage, formatted, tag)
+             VALUES (:aid, :raw, :fmt, :tag)',
+            ['aid' => $adminID, 'raw' => $raw, 'fmt' => $formatted, 'tag' => $tag]
+        );
+        return (int) $this->db->lastInsertId();
+    }
+
+    public function getRecentBroadcasts(int $limit = 10): array {
+        $stmt = $this->db->prepare(
+            'SELECT b.*, a.usersname AS adminName
+             FROM ChatBroadcast b
+             JOIN Admin a ON a.adminID = b.adminID
+             ORDER BY b.createdAt DESC LIMIT ' . (int) $limit
+        );
+        $stmt->execute();
+        return array_reverse($stmt->fetchAll());
+    }
+
+    public function getLatestBroadcastSince(int $afterID): array {
+        $stmt = $this->db->prepare(
+            'SELECT b.*, a.usersname AS adminName
+             FROM ChatBroadcast b
+             JOIN Admin a ON a.adminID = b.adminID
+             WHERE b.broadcastID > :after
+             ORDER BY b.createdAt ASC'
+        );
+        $stmt->execute(['after' => $afterID]);
+        return $stmt->fetchAll();
+    }
+
+    // ─── ADMIN VIEW ─────────────────────────────────────────
+
+    public function getAllActiveSessions(): array {
+        $stmt = $this->db->prepare(
+            'SELECT cs.*, u.usersname, u.email,
+                    (SELECT content FROM ChatMessage cm
+                     WHERE cm.sessionID = cs.sessionID
+                     ORDER BY cm.createdAt DESC LIMIT 1) AS lastMessage,
+                    (SELECT createdAt FROM ChatMessage cm2
+                     WHERE cm2.sessionID = cs.sessionID
+                     ORDER BY cm2.createdAt DESC LIMIT 1) AS lastAt,
+                    (SELECT COUNT(*) FROM ChatMessage cm3
+                     WHERE cm3.sessionID = cs.sessionID AND cm3.senderType = \'user\') AS messageCount
+             FROM ChatSession cs
+             JOIN Users u ON u.usersID = cs.usersID
+             ORDER BY lastAt DESC'
+        );
         $stmt->execute();
         return $stmt->fetchAll();
     }

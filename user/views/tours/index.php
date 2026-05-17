@@ -1,9 +1,8 @@
 <?php
 if (!function_exists('tourPriceText')) {
     function tourPriceText($tour) {
-        return number_format((float) ($tour['priceAdult'] ?? $tour['price'] ?? 0), 0, ',', '.') . ' đ';
+        return number_format((float) ($tour['priceAdultSale'] ?? $tour['priceAdult'] ?? $tour['price'] ?? 0), 0, ',', '.') . ' đ';
     }
-}
 ?>
 
 <main class="bg-background">
@@ -206,6 +205,11 @@ if (!function_exists('tourPriceText')) {
                                 <div class="absolute left-5 top-5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-white backdrop-blur-sm">
                                     <?php echo htmlspecialchars($tour['continentLabel'] ?? 'Nuoc ngoai'); ?>
                                 </div>
+                                <?php if (!empty($tour['promoDiscountPercent'])): ?>
+                                    <div class="absolute right-5 top-5 rounded-full bg-[#ff645a] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-white shadow-lg">
+                                        Giảm <?php echo number_format($tour['promoDiscountPercent'], 0); ?>%
+                                    </div>
+                                <?php endif; ?>
                             </div>
                             <div class="p-7">
                                 <div class="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
@@ -223,6 +227,9 @@ if (!function_exists('tourPriceText')) {
                                     <div>
                                         <div class="text-xs uppercase tracking-[0.2em] text-slate-400">Gia tu</div>
                                         <div class="mt-2 text-2xl font-black text-[#ff645a]"><?php echo tourPriceText($tour); ?></div>
+                                        <?php if (!empty($tour['promoDiscountPercent'])): ?>
+                                            <div class="text-sm text-slate-400 line-through"><?php echo number_format((float) ($tour['priceAdult'] ?? 0), 0, ',', '.'); ?> đ</div>
+                                        <?php endif; ?>
                                     </div>
                                     <a href="index.php?controller=tour&action=detail&id=<?php echo (int) $tour['tourID']; ?>" class="rounded-full bg-[#2b5bb5] px-5 py-3 text-sm font-bold text-white transition hover:brightness-110">
                                         Chi tiet tour

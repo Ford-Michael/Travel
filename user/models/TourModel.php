@@ -5,6 +5,7 @@
  */
 
 require_once __DIR__ . '/Model.php';
+require_once __DIR__ . '/PromotionModel.php';
 
 class TourModel extends Model {
     protected $table = 'Tour';
@@ -225,58 +226,6 @@ class TourModel extends Model {
         return $this->normalizeTours($stmt->fetchAll(), true);
     }
 
-    /**
-     * Get tours sorted by purchase count (most purchased first).
-     */
-    public function getTopPurchasedTours($limit = 6) {
-        $limit = max(1, (int) $limit);
-        try {
-            // Sale only when an active promotion is created by admin.
-            $sql = "SELECT t.*, COUNT(b.bookingID) AS purchaseCount, COALESCE(ap.discount, 0) AS promoDiscount
-                    FROM {$this->table} t
-                    LEFT JOIN Booking b ON b.tourID = t.tourID
-                    LEFT JOIN (
-                        SELECT p.tourID, MAX(p.discount) AS discount
-                        FROM Promotion p
-                        WHERE p.startDate <= NOW()
-                          AND p.endDate >= NOW()
-                          AND (p.quantity IS NULL OR p.quantity > 0)
-                        GROUP BY p.tourID
-                    ) ap ON ap.tourID = t.tourID
-                    WHERE t.availability = 1
-                    GROUP BY t.tourID
-                    ORDER BY purchaseCount DESC, t.{$this->primaryKey} DESC
-                    LIMIT :limit";
-            $stmt = $this->db->prepare($sql);
-            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-            $stmt->execute();
-            $tours = $stmt->fetchAll();
-        } catch (Exception $e) {
-            // Fallback when Promotion table is unavailable.
-            $sql = "SELECT t.*, COUNT(b.bookingID) AS purchaseCount
-                    FROM {$this->table} t
-                    LEFT JOIN Booking b ON b.tourID = t.tourID
-                    WHERE t.availability = 1
-                    GROUP BY t.tourID
-                    ORDER BY purchaseCount DESC, t.{$this->primaryKey} DESC
-                    LIMIT :limit";
-            $stmt = $this->db->prepare($sql);
-            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-            $stmt->execute();
-            $tours = $stmt->fetchAll();
-        }
-
-        $normalized = $this->normalizeTours($tours, true);
-
-        foreach ($normalized as &$tour) {
-            $tour['purchaseCount'] = (int) ($tour['purchaseCount'] ?? 0);
-            $tour['promoDiscount'] = (float) ($tour['promoDiscount'] ?? 0);
-        }
-        unset($tour);
-
-        return $normalized;
-    }
-
     public function getActiveTours($page = 1, $limit = 9) {
         return $this->getForeignTours($page, $limit);
     }
@@ -291,7 +240,10 @@ class TourModel extends Model {
             return null;
         }
 
-        $tour = $this->normalizeTour($tour, true);
+        $promoModel = new PromotionModel();
+        $promoMap = $promoModel->getBestDiscountPercentForTourIds([(int) $id]);
+        $promoPct = (float) ($promoMap[(int) $id] ?? 0);
+        $tour = $this->normalizeTour($tour, true, $promoPct);
         $tour['images'] = $this->getTourImages($id);
         $tour['itinerary'] = $this->getItinerary($id);
         $tour['reviewCount'] = $this->getReviewCount($id);
@@ -326,58 +278,45 @@ class TourModel extends Model {
     }
 
     /**
-     * Search tours matching any keyword (title / description / destination), with pagination.
+     * Search tours by multiple keywords with pagination.
      *
      * @param string[] $keywords
      * @return array{tours: array, total: int}
      */
     public function searchToursKeywordsPaged(array $keywords, $page = 1, $limit = 9) {
-        $keywords = array_values(array_unique(array_filter(array_map(static function ($k) {
-            return trim((string) $k);
-        }, $keywords))));
-
-        if (empty($keywords)) {
-            return ['tours' => [], 'total' => 0];
-        }
-
         $page = max(1, (int) $page);
         $limit = max(1, (int) $limit);
-        $offset = ($page - 1) * $limit;
 
-        $orParts = [];
-        foreach ($keywords as $i => $_) {
-            $orParts[] = "(title LIKE :kw{$i} OR description LIKE :kw{$i} OR destination LIKE :kw{$i})";
-        }
-        $kwClause = '(' . implode(' OR ', $orParts) . ')';
-
-        $countSql = "SELECT COUNT(*) FROM {$this->table}
-                     WHERE availability = 1 AND {$kwClause}";
-        $stmtCount = $this->db->prepare($countSql);
-        foreach ($keywords as $i => $kw) {
-            $stmtCount->bindValue(":kw{$i}", '%' . $kw . '%');
-        }
-        $stmtCount->execute();
-        $total = (int) $stmtCount->fetchColumn();
-
-        if ($total === 0) {
-            return ['tours' => [], 'total' => 0];
+        $cleanKeywords = [];
+        foreach ($keywords as $keyword) {
+            $keyword = trim((string) $keyword);
+            if ($keyword !== '') {
+                $cleanKeywords[] = mb_strtolower($keyword, 'UTF-8');
+            }
         }
 
-        $sql = "SELECT * FROM {$this->table}
-                WHERE availability = 1 AND {$kwClause}
-                ORDER BY {$this->primaryKey} DESC
-                LIMIT :limit OFFSET :offset";
-        $stmt = $this->db->prepare($sql);
-        foreach ($keywords as $i => $kw) {
-            $stmt->bindValue(":kw{$i}", '%' . $kw . '%');
+        if (empty($cleanKeywords)) {
+            return [
+                'tours' => [],
+                'total' => 0,
+            ];
         }
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-        $stmt->execute();
+
+        $matchedTours = [];
+        foreach ($this->getAllAvailableTours() as $tour) {
+            $haystack = mb_strtolower($this->buildHaystack($tour), 'UTF-8');
+
+            foreach ($cleanKeywords as $keyword) {
+                if (mb_strpos($haystack, $keyword, 0, 'UTF-8') !== false) {
+                    $matchedTours[] = $tour;
+                    break;
+                }
+            }
+        }
 
         return [
-            'tours' => $this->normalizeTours($stmt->fetchAll(), true),
-            'total' => $total,
+            'tours' => $this->sliceTours($matchedTours, $page, $limit),
+            'total' => count($matchedTours),
         ];
     }
 
@@ -592,14 +531,41 @@ class TourModel extends Model {
     }
 
     private function normalizeTours(array $tours, $attachImages = false) {
+        $ids = [];
+        foreach ($tours as $t) {
+            if (!empty($t['tourID'])) {
+                $ids[] = (int) $t['tourID'];
+            }
+        }
+        $promoMap = [];
+        if (!empty($ids)) {
+            $promoModel = new PromotionModel();
+            $promoMap = $promoModel->getBestDiscountPercentForTourIds($ids);
+        }
         $normalized = [];
         foreach ($tours as $tour) {
-            $normalized[] = $this->normalizeTour($tour, $attachImages);
+            $tid = (int) ($tour['tourID'] ?? 0);
+            $pct = $tid > 0 ? (float) ($promoMap[$tid] ?? 0) : 0.0;
+            $normalized[] = $this->normalizeTour($tour, $attachImages, $pct);
         }
         return $normalized;
     }
 
-    private function normalizeTour($tour, $attachImages = false) {
+    /**
+     * Attach active promotion pricing to a raw tour row (e.g. inactive tour on old invoice).
+     */
+    public function enrichTourWithPromotion(array $tour) {
+        $tid = (int) ($tour['tourID'] ?? 0);
+        if ($tid <= 0) {
+            return $this->normalizeTour($tour, false, 0.0);
+        }
+        $promoModel = new PromotionModel();
+        $map = $promoModel->getBestDiscountPercentForTourIds([$tid]);
+        $pct = (float) ($map[$tid] ?? 0);
+        return $this->normalizeTour($tour, false, $pct);
+    }
+
+    private function normalizeTour($tour, $attachImages = false, $promoDiscountPercent = 0.0) {
         if (!$tour) {
             return $tour;
         }
@@ -607,23 +573,36 @@ class TourModel extends Model {
         $tour['tour_name'] = $tour['tour_name'] ?? ($tour['title'] ?? 'Untitled Tour');
         $tour['title'] = $tour['title'] ?? ($tour['tour_name'] ?? 'Untitled Tour');
         $tour['status'] = !empty($tour['availability']) ? 'active' : 'inactive';
-        $tour['price'] = (float) ($tour['priceAdult'] ?? 0);
+
+        $listAdult = (float) ($tour['priceAdult'] ?? 0);
+        $listChild = (float) ($tour['priceChild'] ?? 0);
+        $pct = min(100, max(0, (float) $promoDiscountPercent));
+        $tour['promoDiscountPercent'] = $pct;
+        $tour['priceAdultSale'] = (int) round($listAdult * (1 - $pct / 100));
+        $tour['priceChildSale'] = (int) round($listChild * (1 - $pct / 100));
+        $tour['price'] = (float) $tour['priceAdultSale'];
         $tour['continent'] = $this->getTourContinent($tour);
         $tour['domesticRegion'] = $this->getTourDomesticRegion($tour);
         $tour['continentLabel'] = $tour['continent'] ? ($this->getContinentMeta($tour['continent'])['name'] ?? '') : 'Khac';
         $tour['domesticLabel'] = $tour['domesticRegion'] ? ($this->getDomesticMeta($tour['domesticRegion'])['name'] ?? '') : null;
+        $dbImageURL = $tour['imageURL'] ?? '';
+
         $tour['summary'] = $tour['description'] ?? '';
-        $tour['heroImage'] = $tour['heroImage'] ?? $this->getPlaceholderImage($tour['continent'], $tour['domesticRegion']);
-        $tour['imageURL'] = $tour['imageURL'] ?? $tour['heroImage'];
 
         if ($attachImages) {
             $tour['images'] = $this->getTourImages($tour['tourID']);
-            if (!empty($tour['imageURL'])) {
-                $tour['heroImage'] = $tour['imageURL'];
+            if (!empty($dbImageURL)) {
+                $tour['heroImage'] = $dbImageURL;
             } elseif (!empty($tour['images'][0]['imageURL'])) {
                 $tour['heroImage'] = $tour['images'][0]['imageURL'];
                 $tour['imageURL'] = $tour['images'][0]['imageURL'];
+            } else {
+                $tour['heroImage'] = $this->getPlaceholderImage($tour['continent'], $tour['domesticRegion']);
+                $tour['imageURL'] = $tour['heroImage'];
             }
+        } else {
+            $tour['heroImage'] = !empty($dbImageURL) ? $dbImageURL : $this->getPlaceholderImage($tour['continent'], $tour['domesticRegion']);
+            $tour['imageURL'] = !empty($dbImageURL) ? $dbImageURL : $tour['heroImage'];
         }
 
         return $tour;
@@ -742,19 +721,8 @@ class TourModel extends Model {
     }
 
     private function getPlaceholderImage($continent, $domesticRegion = null) {
-        if ($domesticRegion && isset($this->domesticMeta[$domesticRegion]['heroImage'])) {
-            return $this->domesticMeta[$domesticRegion]['heroImage'];
-        }
-
-        $images = [
-            'asia' => $this->continentMeta['asia']['heroImage'],
-            'europe' => $this->continentMeta['europe']['heroImage'],
-            'america' => $this->continentMeta['america']['heroImage'],
-            'oceania' => $this->continentMeta['oceania']['heroImage'],
-            'africa' => $this->continentMeta['africa']['heroImage'],
-        ];
-
-        return $images[$continent] ?? $images['asia'];
+        // Return a local fallback image instead of Unsplash URLs which might fail to load
+        return '/travel.bling/img/pexels-fotoaibe-1669799.jpg';
     }
 
     private function syncGalleryImagesFromFilesystem($tourId) {

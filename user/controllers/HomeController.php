@@ -66,16 +66,9 @@ class HomeController extends Controller {
      * Promotion / Khuyến Mãi page
      */
     public function promotion() {
-        try {
-            $promoTours = $this->tourModel->getTopPurchasedTours(6);
-        } catch (Exception $e) {
-            $promoTours = [];
-        }
-
         $data = [
             'title'       => 'Khuyến Mãi | Travel Bling',
-            'description' => 'Săn deal du lịch hấp dẫn với ưu đãi lên đến 50%. Flash sale, voucher giảm giá và combo tour giá sốc từ Travel Bling.',
-            'promoTours'  => $promoTours,
+            'description' => 'Ưu đãi du lịch: giảm giá áp dụng trực tiếp trên giá tour đang mở bán — không cần nhập mã.',
             'flash'       => $this->getFlash(),
             'user'        => $this->getCurrentUser(),
         ];
@@ -92,5 +85,29 @@ class HomeController extends Controller {
             'user'  => $this->getCurrentUser(),
         ];
         $this->view('home/contact', $data);
+    }
+
+    /**
+     * Privacy Policy page
+     */
+    public function privacy() {
+        $data = [
+            'title' => 'Chính Sách Bảo Mật | Travel Bling',
+            'flash' => $this->getFlash(),
+            'user'  => $this->getCurrentUser(),
+        ];
+        $this->view('home/privacy', $data);
+    }
+
+    /**
+     * Terms and Conditions page
+     */
+    public function terms() {
+        $data = [
+            'title' => 'Điều Khoản Sử Dụng | Travel Bling',
+            'flash' => $this->getFlash(),
+            'user'  => $this->getCurrentUser(),
+        ];
+        $this->view('home/terms', $data);
     }
 }

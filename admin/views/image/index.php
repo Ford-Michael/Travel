@@ -45,39 +45,11 @@
                         <?php foreach ($images as $image): ?>
                             <tr>
                                 <td>
-                                    <?php 
-                                    $imageSrc = '';
-                                    if (!empty($image['imageURL'])) {
-                                        // Try different path formats
-                                        $possiblePaths = [
-                                            '../' . $image['imageURL'],
-                                            $image['imageURL'],
-                                            '../img/' . $image['imageURL'],
-                                            '../img/tours/' . basename($image['imageURL'])
-                                        ];
-                                        
-                                        foreach ($possiblePaths as $path) {
-                                            $relativePath = str_replace('\\', '/', $path);
-                                            while (strpos($relativePath, '../') === 0) {
-                                                $relativePath = substr($relativePath, 3);
-                                            }
-
-                                            if (file_exists(__DIR__ . '/../../' . $relativePath)) {
-                                                $imageSrc = $path;
-                                                break;
-                                            }
-                                        }
-                                        
-                                        if (empty($imageSrc)) {
-                                            $imageSrc = '../' . $image['imageURL']; // Fallback
-                                        }
-                                    }
-                                    
-                                    if (!empty($image['imageURL'])): ?>
-                                        <img src="<?php echo htmlspecialchars($imageSrc); ?>" 
+                                    <?php if (!empty($image['displayImageUrl'])): ?>
+                                        <img src="<?php echo htmlspecialchars($image['displayImageUrl']); ?>" 
                                              alt="Tour Image" 
                                              style="width: 80px; height: 60px; object-fit: cover; border-radius: 4px;"
-                                             onerror="this.src='assets/img/no-image.png'; console.log('Image failed:', '<?php echo htmlspecialchars($image['imageURL']); ?>');">
+                                             onerror="this.src='assets/img/undraw_posting_photo.svg';">
                                     <?php else: ?>
                                         <div class="bg-gray-200 d-flex align-items-center justify-content-center" 
                                              style="width: 80px; height: 60px; border-radius: 4px;">
@@ -92,8 +64,8 @@
                                     <?php echo htmlspecialchars($image['description'] ?? '-'); ?>
                                 </td>
                                 <td class="table-actions">
-                                    <button type="button" class="btn btn-sm btn-info" 
-                                            onclick="viewImage('<?php echo htmlspecialchars($image['imageURL'] ?? ''); ?>', '<?php echo htmlspecialchars($image['tour_title'] ?? ''); ?>')">
+                                    <button type="button" class="btn btn-sm btn-info"
+                                            onclick='viewImage(<?php echo json_encode($image["displayImageUrl"] ?? ""); ?>, <?php echo json_encode($image["tour_title"] ?? ""); ?>)'>
                                         <i class="fas fa-eye"></i>
                                     </button>
                                     <button type="button" class="btn btn-sm btn-danger" 
@@ -156,13 +128,12 @@
 <script>
 function viewImage(imageUrl, tourName) {
     if (imageUrl) {
-        // Try the same path logic as in the table
-        document.getElementById('previewImage').src = '../' + imageUrl;
+        document.getElementById('previewImage').src = imageUrl;
         document.getElementById('previewImage').onerror = function() {
-            this.src = 'assets/img/no-image.png';
+            this.src = 'assets/img/undraw_posting_photo.svg';
         };
     } else {
-        document.getElementById('previewImage').src = 'assets/img/no-image.png';
+        document.getElementById('previewImage').src = 'assets/img/undraw_posting_photo.svg';
     }
     document.getElementById('tourName').textContent = tourName || 'Unknown Tour';
     $('#imagePreviewModal').modal('show');

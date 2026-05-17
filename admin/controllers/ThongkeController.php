@@ -109,19 +109,35 @@ class ThongkeController extends Controller {
     private function getUserMonthlyStats() {
         $months = [];
         $counts = [];
+        $monthKeys = [];
 
         for ($i = 5; $i >= 0; $i--) {
-            $date = date('Y-m', strtotime("-$i months"));
+            $date = date('Y-m', strtotime("-{$i} months"));
+            $monthKeys[] = $date;
             $months[] = date('M Y', strtotime("-$i months"));
+            $counts[] = 0;
+        }
 
-            $sql = "SELECT COUNT(*) as count FROM Users WHERE DATE_FORMAT(createdDate, '%Y-%m') = :month";
-            try {
-                $stmt = $this->userModel->query($sql, ['month' => $date]);
-                $result = $stmt->fetch();
-                $counts[] = $result['count'] ?? 0;
-            } catch (Exception $e) {
-                $counts[] = 0;
+        try {
+            $dateColumn = $this->resolveDateColumn('Users', ['createdDate', 'createdAt', 'created_at', 'timestamp']);
+            if ($dateColumn) {
+                $sql = "SELECT DATE_FORMAT({$dateColumn}, '%Y-%m') AS ym, COUNT(*) AS total
+                        FROM Users
+                        WHERE {$dateColumn} IS NOT NULL
+                          AND {$dateColumn} >= DATE_SUB(CURDATE(), INTERVAL 5 MONTH)
+                        GROUP BY ym";
+                $stmt = $this->userModel->query($sql);
+                $rows = $stmt->fetchAll();
+                foreach ($rows as $row) {
+                    $ym = $row['ym'] ?? '';
+                    $idx = array_search($ym, $monthKeys, true);
+                    if ($idx !== false) {
+                        $counts[$idx] = (int) ($row['total'] ?? 0);
+                    }
+                }
             }
+        } catch (Exception $e) {
+            // keep default zeros
         }
 
         return ['labels' => $months, 'data' => $counts];
@@ -134,26 +150,60 @@ class ThongkeController extends Controller {
         $months = [];
         $amounts = [];
         $counts = [];
+        $monthKeys = [];
 
         for ($i = 5; $i >= 0; $i--) {
-            $date = date('Y-m', strtotime("-$i months"));
+            $date = date('Y-m', strtotime("-{$i} months"));
+            $monthKeys[] = $date;
             $months[] = date('M Y', strtotime("-$i months"));
+            $amounts[] = 0;
+            $counts[] = 0;
+        }
 
-            $sql = "SELECT COALESCE(SUM(amount), 0) as total, COUNT(*) as count
-                    FROM Checkout
-                    WHERE DATE_FORMAT(paymentDate, '%Y-%m') = :month
-                    AND paymentStatus = 'Completed'";
-            try {
-                $stmt = $this->checkoutModel->query($sql, ['month' => $date]);
-                $result = $stmt->fetch();
-                $amounts[] = (float) ($result['total'] ?? 0);
-                $counts[] = (int) ($result['count'] ?? 0);
-            } catch (Exception $e) {
-                $amounts[] = 0;
-                $counts[] = 0;
+        try {
+            $dateColumn = $this->resolveDateColumn('Checkout', ['paymentDate', 'paidAt', 'createdDate', 'createdAt', 'created_at']);
+            if ($dateColumn) {
+                // Doanh thu ưu tiên trạng thái completed/paid/success; số giao dịch lấy tổng để luôn thấy cột mốc.
+                $sql = "SELECT DATE_FORMAT({$dateColumn}, '%Y-%m') AS ym,
+                               COUNT(*) AS txCount,
+                               COALESCE(SUM(CASE
+                                   WHEN LOWER(COALESCE(paymentStatus, '')) IN ('completed','paid','success')
+                                   THEN amount
+                                   ELSE 0
+                               END), 0) AS completedAmount
+                        FROM Checkout
+                        WHERE {$dateColumn} IS NOT NULL
+                          AND {$dateColumn} >= DATE_SUB(CURDATE(), INTERVAL 5 MONTH)
+                        GROUP BY ym";
+                $stmt = $this->checkoutModel->query($sql);
+                $rows = $stmt->fetchAll();
+                foreach ($rows as $row) {
+                    $ym = $row['ym'] ?? '';
+                    $idx = array_search($ym, $monthKeys, true);
+                    if ($idx !== false) {
+                        $counts[$idx] = (int) ($row['txCount'] ?? 0);
+                        $amounts[$idx] = (float) ($row['completedAmount'] ?? 0);
+                    }
+                }
             }
+        } catch (Exception $e) {
+            // keep default zeros
         }
 
         return ['labels' => $months, 'amounts' => $amounts, 'counts' => $counts];
+    }
+
+    private function resolveDateColumn($table, array $candidates) {
+        foreach ($candidates as $column) {
+            try {
+                $stmt = $this->checkoutModel->query("SHOW COLUMNS FROM {$table} LIKE :column", ['column' => $column]);
+                if ($stmt->fetch()) {
+                    return $column;
+                }
+            } catch (Exception $e) {
+                continue;
+            }
+        }
+        return null;
     }
 }

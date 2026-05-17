@@ -134,9 +134,9 @@
                     </div>
                     <label class="text-sm text-on-surface-variant leading-relaxed" for="reg-terms">
                         Tôi đồng ý với
-                        <a class="text-secondary hover:underline font-medium" href="#">Điều khoản Dịch vụ</a>
+                        <a class="text-secondary hover:underline font-medium" href="index.php?controller=home&action=terms" target="_blank">Điều khoản Dịch vụ</a>
                         và
-                        <a class="text-secondary hover:underline font-medium" href="#">Chính sách Bảo mật</a>.
+                        <a class="text-secondary hover:underline font-medium" href="index.php?controller=home&action=privacy" target="_blank">Chính sách Bảo mật</a>.
                     </label>
                 </div>
 

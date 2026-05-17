@@ -1,14 +1,36 @@
 <?php
 $tourName = $tour['tour_name'] ?? ($tour['title'] ?? 'Tour');
 $heroImage = $tour['imageURL'] ?? ($tour['heroImage'] ?? '');
-$adultPrice = (float) ($tour['priceAdult'] ?? 0);
-$childPrice = (float) ($tour['priceChild'] ?? 0);
+$adultPriceList = (float) ($tour['priceAdult'] ?? 0);
+$childPriceList = (float) ($tour['priceChild'] ?? 0);
+$adultPrice = (float) ($tour['priceAdultSale'] ?? $adultPriceList);
+$childPrice = (float) ($tour['priceChildSale'] ?? $childPriceList);
+$promoPct = (float) ($tour['promoDiscountPercent'] ?? 0);
 $availableSlots = (int) ($tour['quantity'] ?? 0);
+$discountRowLabel = $promoPct > 0
+    ? 'Giảm giá khuyến mãi (' . number_format($promoPct, 0, ',', '.') . '%)'
+    : 'Giảm giá khuyến mãi';
+
+$oneAdultList = $adultPriceList;
+$oneAdultSaleSub = $adultPrice;
+$initialListSub = $oneAdultList;
+$initialSaleSub = $oneAdultSaleSub;
+$initialDiscount = max(0, $initialListSub - $initialSaleSub);
+$initialTaxable = $initialSaleSub;
+$initialVat = $initialTaxable * 0.10;
+$initialTotal = $initialTaxable + $initialVat;
 ?>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <style>
     .editorial-shadow {
         box-shadow: 0px 12px 32px rgba(25, 28, 29, 0.06);
+    }
+    #qrCodeContainer canvas,
+    #qrCodeContainer img {
+        margin: 0 auto;
+        display: block;
     }
 </style>
 
@@ -32,108 +54,156 @@ $availableSlots = (int) ($tour['quantity'] ?? 0);
                 <!-- Billing Information -->
                 <section class="bg-surface-container-lowest p-6 sm:p-10 rounded-xl editorial-shadow">
                     <div class="flex items-center space-x-3 mb-8">
-                        <span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">person_pin</span>
+                        <span class="material-symbols-outlined text-secondary"
+                            style="font-variation-settings: 'FILL' 1;">person_pin</span>
                         <h2 class="text-2xl font-headline font-bold text-on-secondary-fixed">Billing Information</h2>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="space-y-2">
                             <label class="text-sm font-semibold text-on-surface-variant">Full Name</label>
-                            <input class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-secondary/20 placeholder:text-outline/60 text-on-surface transition-all" placeholder="Enter your full name" type="text" value="<?php echo htmlspecialchars($account['usersname'] ?? $account['username'] ?? ''); ?>" required/>
+                            <input id="fullName" name="fullName"
+                                class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-secondary/20 placeholder:text-outline/60 text-on-surface transition-all"
+                                placeholder="Enter your full name" type="text"
+                                value="<?php echo htmlspecialchars($account['usersname'] ?? $account['username'] ?? ''); ?>"
+                                required />
                         </div>
                         <div class="space-y-2">
                             <label class="text-sm font-semibold text-on-surface-variant">Phone Number</label>
-                            <input class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-secondary/20 placeholder:text-outline/60 text-on-surface transition-all" placeholder="Enter your phone number" type="tel"/>
+                            <input id="phoneNumber" name="phoneNumber"
+                                class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-secondary/20 placeholder:text-outline/60 text-on-surface transition-all"
+                                placeholder="Enter your phone number" type="tel"
+                                value="<?php echo htmlspecialchars($account['phoneNumber'] ?? ''); ?>" required />
                         </div>
                         <div class="md:col-span-2 space-y-2">
                             <label class="text-sm font-semibold text-on-surface-variant">Email Address</label>
-                            <input class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-secondary/20 placeholder:text-outline/60 text-on-surface transition-all" placeholder="email@example.com" type="email" value="<?php echo htmlspecialchars($account['email'] ?? ''); ?>" required/>
+                            <input id="email" name="email"
+                                class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-secondary/20 placeholder:text-outline/60 text-on-surface transition-all"
+                                placeholder="email@example.com" type="email"
+                                value="<?php echo htmlspecialchars($account['email'] ?? ''); ?>" required />
                         </div>
                         <div class="md:col-span-2 space-y-2">
                             <label class="text-sm font-semibold text-on-surface-variant">Address</label>
-                            <input class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-secondary/20 placeholder:text-outline/60 text-on-surface transition-all" placeholder="Your current address" type="text"/>
+                            <input id="address" name="address"
+                                class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-secondary/20 placeholder:text-outline/60 text-on-surface transition-all"
+                                placeholder="Your current address" type="text"
+                                value="<?php echo htmlspecialchars($account['address'] ?? ''); ?>" />
                         </div>
 
                         <div class="space-y-2">
-                            <label class="text-sm font-semibold text-on-surface-variant">Adults (<?php echo number_format($adultPrice, 0, ',', '.'); ?>₫)</label>
-                            <input id="numAdults" name="numAdults" class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-secondary/20 text-on-surface transition-all" type="number" min="1" value="1" required/>
+                            <label class="text-sm font-semibold text-on-surface-variant">Adults
+                                (<?php echo number_format($adultPrice, 0, ',', '.'); ?>₫)</label>
+                            <input id="numAdults" name="numAdults"
+                                class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-secondary/20 text-on-surface transition-all"
+                                type="number" min="1" value="1" required />
                         </div>
                         <div class="space-y-2">
-                            <label class="text-sm font-semibold text-on-surface-variant">Children (<?php echo number_format($childPrice, 0, ',', '.'); ?>₫)</label>
-                            <input id="numChildren" name="numChildren" class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-secondary/20 text-on-surface transition-all" type="number" min="0" value="0" required/>
+                            <label class="text-sm font-semibold text-on-surface-variant">Children
+                                (<?php echo number_format($childPrice, 0, ',', '.'); ?>₫)</label>
+                            <input id="numChildren" name="numChildren"
+                                class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-secondary/20 text-on-surface transition-all"
+                                type="number" min="0" value="0" required />
                         </div>
 
                         <div class="md:col-span-2 space-y-2">
-                            <label class="text-sm font-semibold text-on-surface-variant">Message/Notes (Optional)</label>
-                            <textarea name="specialRequests" class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-secondary/20 placeholder:text-outline/60 text-on-surface transition-all resize-none" placeholder="Special requests or notes for your trip..." rows="4"></textarea>
+                            <label class="text-sm font-semibold text-on-surface-variant">Message/Notes
+                                (Optional)</label>
+                            <textarea name="specialRequests"
+                                class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-secondary/20 placeholder:text-outline/60 text-on-surface transition-all resize-none"
+                                placeholder="Special requests or notes for your trip..." rows="4"></textarea>
                         </div>
                     </div>
                 </section>
 
                 <!-- Payment Method -->
-                <section class="bg-surface-container-lowest p-6 sm:p-10 rounded-xl editorial-shadow" id="payment-methods">
+                <section class="bg-surface-container-lowest p-6 sm:p-10 rounded-xl editorial-shadow"
+                    id="payment-methods">
                     <div class="flex items-center space-x-3 mb-8">
-                        <span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">payments</span>
+                        <span class="material-symbols-outlined text-secondary"
+                            style="font-variation-settings: 'FILL' 1;">payments</span>
                         <h2 class="text-2xl font-headline font-bold text-on-secondary-fixed">Payment Method</h2>
                     </div>
-                    
+
                     <div class="space-y-4">
                         <!-- Cash at office -->
-                        <label class="block relative cursor-pointer group border-2 border-outline-variant/30 rounded-lg overflow-hidden transition-all has-[:checked]:border-secondary has-[:checked]:bg-surface-container-low">
+                        <label
+                            class="block relative cursor-pointer group border-2 border-outline-variant/30 rounded-lg overflow-hidden transition-all has-[:checked]:border-secondary has-[:checked]:bg-surface-container-low">
                             <div class="p-4 flex items-center space-x-4 bg-white">
-                                <input type="radio" name="paymentMethod" value="cash" class="w-5 h-5 text-secondary border-2 border-outline-variant focus:ring-secondary/20 transition-all shrink-0">
+                                <input type="radio" name="paymentMethod" value="cash"
+                                    class="w-5 h-5 text-secondary border-2 border-outline-variant focus:ring-secondary/20 transition-all shrink-0">
                                 <div class="flex items-center space-x-3">
-                                    <span class="material-symbols-outlined text-on-surface-variant group-has-[:checked]:text-secondary transition-colors">payments</span>
-                                    <span class="font-medium text-on-surface-variant group-has-[:checked]:text-secondary group-has-[:checked]:font-bold transition-colors">Cash at the office</span>
+                                    <span
+                                        class="material-symbols-outlined text-on-surface-variant group-has-[:checked]:text-secondary transition-colors">payments</span>
+                                    <span
+                                        class="font-medium text-on-surface-variant group-has-[:checked]:text-secondary group-has-[:checked]:font-bold transition-colors">Cash
+                                        at the office</span>
                                 </div>
                             </div>
                         </label>
 
                         <!-- Bank Transfer -->
-                        <label class="block relative cursor-pointer group border-2 border-outline-variant/30 rounded-lg overflow-hidden transition-all has-[:checked]:border-secondary has-[:checked]:bg-surface-container-low">
+                        <label
+                            class="block relative cursor-pointer group border-2 border-outline-variant/30 rounded-lg overflow-hidden transition-all has-[:checked]:border-secondary has-[:checked]:bg-surface-container-low">
                             <div class="p-4 flex items-center space-x-4 bg-white">
-                                <input type="radio" name="paymentMethod" value="bank" class="w-5 h-5 text-secondary border-2 border-outline-variant focus:ring-secondary/20 transition-all shrink-0" checked>
+                                <input type="radio" name="paymentMethod" value="bank"
+                                    class="w-5 h-5 text-secondary border-2 border-outline-variant focus:ring-secondary/20 transition-all shrink-0"
+                                    checked>
                                 <div class="flex items-center space-x-3">
-                                    <span class="material-symbols-outlined text-on-surface-variant group-has-[:checked]:text-secondary transition-colors" style="font-variation-settings: 'FILL' 1;">account_balance</span>
-                                    <span class="font-medium text-on-surface-variant group-has-[:checked]:font-bold group-has-[:checked]:text-secondary transition-colors">Bank Transfer</span>
+                                    <span
+                                        class="material-symbols-outlined text-on-surface-variant group-has-[:checked]:text-secondary transition-colors"
+                                        style="font-variation-settings: 'FILL' 1;">account_balance</span>
+                                    <span
+                                        class="font-medium text-on-surface-variant group-has-[:checked]:font-bold group-has-[:checked]:text-secondary transition-colors">Bank
+                                        Transfer</span>
                                 </div>
                             </div>
-                            <div class="hidden group-has-[:checked]:block p-6 space-y-4 text-sm leading-relaxed border-t border-outline-variant/20 bg-surface-container-low">
+                            <div
+                                class="hidden group-has-[:checked]:block p-6 space-y-4 text-sm leading-relaxed border-t border-outline-variant/20 bg-surface-container-low">
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <p class="text-on-surface-variant font-medium">Company Name</p>
-                                        <p class="font-bold text-on-surface">Công ty TNHH Dịch vụ - Du lịch Việt Sun</p>
+                                        <p class="text-on-surface-variant font-medium">Account Name</p>
+                                        <p class="font-bold text-on-surface">Nguyễn Văn Hải</p>
                                     </div>
                                     <div>
                                         <p class="text-on-surface-variant font-medium">Account Number</p>
-                                        <p class="font-bold text-secondary text-lg">052704070022108</p>
+                                        <p class="font-bold text-secondary text-lg">1032059594</p>
                                     </div>
                                     <div class="md:col-span-2">
                                         <p class="text-on-surface-variant font-medium">Bank</p>
-                                        <p class="font-bold text-on-surface">Ngân hàng TMCP Phát triển Thành phố Hồ Chí Minh (HD Bank), Chi nhánh Nam Kỳ Khởi Nghĩa</p>
+                                        <p class="font-bold text-on-surface">Ngân hàng TMCP Ngoại thương Việt Nam
+                                            (Vietcombank)</p>
                                     </div>
                                     <div class="md:col-span-2 bg-secondary/5 p-4 rounded-lg border border-secondary/10">
                                         <p class="text-secondary font-bold mb-1">Transfer Syntax</p>
-                                        <p class="font-mono text-on-surface-variant tracking-wider uppercase">HỌ TÊN_SỐ ĐIỆN THOẠI_TÊN TOUR</p>
+                                        <p class="font-mono text-on-surface-variant tracking-wider uppercase">HỌ TÊN_SỐ
+                                            ĐIỆN THOẠI_TÊN TOUR</p>
                                     </div>
                                 </div>
                             </div>
                         </label>
 
                         <!-- QR Code -->
-                        <label class="block relative cursor-pointer group border-2 border-outline-variant/30 rounded-lg overflow-hidden transition-all has-[:checked]:border-secondary has-[:checked]:bg-surface-container-low">
+                        <label
+                            class="block relative cursor-pointer group border-2 border-outline-variant/30 rounded-lg overflow-hidden transition-all has-[:checked]:border-secondary has-[:checked]:bg-surface-container-low">
                             <div class="p-4 flex items-center space-x-4 bg-white">
-                                <input type="radio" name="paymentMethod" value="qr" class="w-5 h-5 text-secondary border-2 border-outline-variant focus:ring-secondary/20 transition-all shrink-0">
+                                <input type="radio" name="paymentMethod" value="qr"
+                                    class="w-5 h-5 text-secondary border-2 border-outline-variant focus:ring-secondary/20 transition-all shrink-0">
                                 <div class="flex items-center space-x-3">
-                                    <span class="material-symbols-outlined text-on-surface-variant group-has-[:checked]:text-secondary transition-colors">qr_code_2</span>
-                                    <span class="font-medium text-on-surface-variant group-has-[:checked]:font-bold group-has-[:checked]:text-secondary transition-colors">Bank Transfer via QR Code</span>
+                                    <span
+                                        class="material-symbols-outlined text-on-surface-variant group-has-[:checked]:text-secondary transition-colors">qr_code_2</span>
+                                    <span
+                                        class="font-medium text-on-surface-variant group-has-[:checked]:font-bold group-has-[:checked]:text-secondary transition-colors">Bank
+                                        Transfer via QR Code</span>
                                 </div>
                             </div>
                             <div class="hidden group-has-[:checked]:block p-6 text-center border-t border-outline-variant/20 bg-surface-container-low">
-                                <p class="text-sm text-on-surface-variant mb-4">Please scan the QR code below using your banking app to complete the payment.</p>
-                                <div class="inline-block p-4 bg-white rounded-xl shadow-sm border border-outline-variant/20">
-                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=ChuyenTienVietSunTravel" alt="QR Code" class="w-48 h-48 mx-auto opacity-90" />
+                                <p class="text-sm text-on-surface-variant mb-4">Quét mã QR bên dưới bằng ứng dụng ngân hàng để thanh toán.</p>
+                                <div class="inline-flex items-center justify-center p-4 bg-white rounded-xl shadow-sm border border-outline-variant/20 mx-auto">
+                                    <div id="qrCodeContainer" class="w-48 h-48"></div>
                                 </div>
-                                <p class="text-xs text-on-surface-variant mt-4 font-mono uppercase tracking-wider">Content: HỌ TÊN_SỐ ĐIỆN THOẠI_TÊN TOUR</p>
+                                <p class="text-xs text-on-surface-variant mt-3 font-mono tracking-wider">
+                                    Content: <span class="font-bold text-secondary">1032059594_T<?php echo (int)($tour['tourID'] ?? 0); ?></span>
+                                </p>
+                                <p class="text-xs text-outline mt-1">Quét để thanh toán tour <strong><?php echo htmlspecialchars($tourName); ?></strong></p>
                             </div>
                         </label>
                     </div>
@@ -145,18 +215,20 @@ $availableSlots = (int) ($tour['quantity'] ?? 0);
                 <div class="bg-surface-container-lowest rounded-xl editorial-shadow overflow-hidden">
                     <div class="h-56 relative bg-slate-100">
                         <?php if ($heroImage): ?>
-                            <img alt="<?php echo htmlspecialchars($tourName); ?>" class="w-full h-full object-cover" src="<?php echo htmlspecialchars($heroImage); ?>" />
+                            <img alt="<?php echo htmlspecialchars($tourName); ?>" class="w-full h-full object-cover"
+                                src="<?php echo htmlspecialchars($heroImage); ?>" />
                         <?php endif; ?>
-                        <div class="absolute top-4 left-4 bg-secondary-container/40 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-bold uppercase tracking-widest">
+                        <div
+                            class="absolute top-4 left-4 bg-secondary-container/40 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-bold uppercase tracking-widest">
                             Tour Summary
                         </div>
                     </div>
-                    
+
                     <div class="p-6 sm:p-8 space-y-6">
                         <h3 class="text-xl font-headline font-bold text-on-secondary-fixed leading-snug">
                             <?php echo htmlspecialchars($tourName); ?>
                         </h3>
-                        
+
                         <div class="space-y-3 pt-4 border-t border-outline-variant/20">
                             <div class="flex justify-between text-sm">
                                 <span class="text-outline">Quantity</span>
@@ -164,32 +236,56 @@ $availableSlots = (int) ($tour['quantity'] ?? 0);
                             </div>
                             <div class="flex justify-between text-sm">
                                 <span class="text-outline">Duration</span>
-                                <span class="font-bold"><?php echo htmlspecialchars($tour['duration'] ?? 'N/A'); ?></span>
+                                <span
+                                    class="font-bold"><?php echo htmlspecialchars($tour['duration'] ?? 'N/A'); ?></span>
                             </div>
                             <div class="flex justify-between text-sm text-secondary">
                                 <span class="text-secondary/70">Available Slots</span>
                                 <span class="font-bold"><?php echo number_format($availableSlots); ?></span>
                             </div>
-                            
+
                             <div class="flex justify-between items-end pt-4 border-t border-outline-variant/20">
-                                <span class="text-on-surface-variant font-bold">Total Amount</span>
-                                <span class="text-3xl font-display font-extrabold text-on-primary-container" id="bookingTotal">
-                                    <?php echo number_format($adultPrice, 0, ',', '.'); ?>₫
+                                <span class="text-on-surface-variant text-sm">Cộng tiền hàng</span>
+                                <span class="text-sm font-bold text-on-surface" id="bookingSubtotal">
+                                    <?php echo number_format($initialListSub, 0, ',', '.'); ?>₫
+                                </span>
+                            </div>
+                            <div class="flex justify-between items-end">
+                                <span class="text-on-surface-variant text-sm"><?php echo htmlspecialchars($discountRowLabel); ?></span>
+                                <span class="text-sm font-bold text-green-600" id="bookingDiscount">
+                                    - <?php echo number_format($initialDiscount, 0, ',', '.'); ?>₫
+                                </span>
+                            </div>
+                            <div class="flex justify-between items-end">
+                                <span class="text-on-surface-variant text-sm">Thuế GTGT (10%)</span>
+                                <span class="text-sm font-bold text-[#e84c3d]" id="bookingTax">
+                                    + <?php echo number_format($initialVat, 0, ',', '.'); ?>₫
+                                </span>
+                            </div>
+                            <div class="divider-dashed my-2" style="border-top: 2px dashed #e2e8f0;"></div>
+                            <div class="flex justify-between items-end">
+                                <span class="text-on-surface-variant font-bold">TỔNG CỘNG</span>
+                                <span class="text-3xl font-display font-extrabold text-on-primary-container"
+                                    id="bookingTotal">
+                                    <?php echo number_format($initialTotal, 0, ',', '.'); ?>₫
                                 </span>
                             </div>
                         </div>
-                        
-                        <button type="submit" class="w-full bg-on-primary-container text-white py-5 rounded-lg font-bold text-lg shadow-lg shadow-on-primary-container/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center space-x-2">
+
+                        <button type="submit"
+                            class="w-full bg-on-primary-container text-white py-5 rounded-lg font-bold text-lg shadow-lg shadow-on-primary-container/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center space-x-2">
                             <span>Đặt tour</span>
                             <span class="material-symbols-outlined">arrow_forward</span>
                         </button>
-                        
+
                         <p class="text-center text-xs text-outline leading-relaxed">
-                            By clicking "Đặt tour", you agree to our <a class="underline hover:text-secondary" href="#">Terms of Service</a> and <a class="underline hover:text-secondary" href="#">Privacy Policy</a>.
+                            By clicking "Đặt tour", you agree to our <a class="underline hover:text-secondary"
+                                href="index.php?controller=home&action=terms" target="_blank">Terms of Service</a> and <a class="underline hover:text-secondary"
+                                href="index.php?controller=home&action=privacy" target="_blank">Privacy Policy</a>.
                         </p>
                     </div>
                 </div>
-                
+
                 <!-- Trusted Badge -->
                 <div class="mt-8 flex items-center justify-center space-x-4 opacity-60">
                     <span class="material-symbols-outlined text-secondary">verified_user</span>
@@ -204,32 +300,88 @@ $availableSlots = (int) ($tour['quantity'] ?? 0);
     (function () {
         const adultInput = document.getElementById('numAdults');
         const childInput = document.getElementById('numChildren');
+        const subtotalLabel = document.getElementById('bookingSubtotal');
+        const discountLabel = document.getElementById('bookingDiscount');
+        const taxLabel = document.getElementById('bookingTax');
         const totalLabel = document.getElementById('bookingTotal');
         const displayQuantity = document.getElementById('displayQuantity');
-        const adultPrice = <?php echo json_encode($adultPrice); ?>;
-        const childPrice = <?php echo json_encode($childPrice); ?>;
+        const adultPriceList = <?php echo json_encode($adultPriceList); ?>;
+        const childPriceList = <?php echo json_encode($childPriceList); ?>;
+        const adultPriceSale = <?php echo json_encode($adultPrice); ?>;
+        const childPriceSale = <?php echo json_encode($childPrice); ?>;
+        const VAT_RATE = 0.10;
+
+        const fullNameInput = document.getElementById('fullName');
+        const phoneInput = document.getElementById('phoneNumber');
+        const tourName = <?php echo json_encode($tourName); ?>;
+        const userId = <?php echo json_encode($_SESSION['user_id'] ?? 0); ?>;
+        const tourId = <?php echo json_encode((int) ($tour['tourID'] ?? 0)); ?>;
+
+        let currentTotal = 0;
+
+        // ── QR Generator (tương đương QRGenerator component trong React) ──
+        const accountNo = '1032059594';
+        let qrInstance = null;
+
+        function generateQR(accountId, tourId, amount) {
+            const container = document.getElementById('qrCodeContainer');
+            if (!container) return;
+
+            // Tạo URL chứa thông tin (account + tour + amount)
+            const qrValue = `https://travel.bling/pay?account=${accountId}&tour=${tourId}&amount=${amount}`;
+
+            // Xoá QR cũ nếu có
+            container.innerHTML = '';
+            qrInstance = null;
+
+            qrInstance = new QRCode(container, {
+                text: qrValue,
+                width: 192,
+                height: 192,
+                colorDark: '#1e293b',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H  // Mức độ sửa lỗi cao
+            });
+        }
+
+        function updateQR() {
+            generateQR(accountNo, tourId, currentTotal);
+        }
 
         function formatMoney(value) {
-            return new Intl.NumberFormat('vi-VN').format(value) + '₫';
+            return new Intl.NumberFormat('vi-VN').format(Math.round(value)) + '₫';
         }
 
         function updateTotal() {
             const adults = Math.max(1, parseInt(adultInput.value || '1', 10));
             const children = Math.max(0, parseInt(childInput.value || '0', 10));
-            
-            const total = (adults * adultPrice) + (children * childPrice);
-            totalLabel.textContent = formatMoney(total);
-            
+
+            const listSubtotal = (adults * adultPriceList) + (children * childPriceList);
+            const saleSubtotal = (adults * adultPriceSale) + (children * childPriceSale);
+            const discount = Math.max(0, listSubtotal - saleSubtotal);
+            const taxable = saleSubtotal;
+            const vat = taxable * VAT_RATE;
+            currentTotal = taxable + vat;
+
+            subtotalLabel.textContent = formatMoney(listSubtotal);
+            discountLabel.textContent = '- ' + formatMoney(discount);
+            taxLabel.textContent = '+ ' + formatMoney(vat);
+            totalLabel.textContent = formatMoney(currentTotal);
+
             let quantityText = adults + ' Adult' + (adults > 1 ? 's' : '');
             if (children > 0) {
                 quantityText += ', ' + children + ' Child' + (children > 1 ? 'ren' : '');
             }
             displayQuantity.textContent = quantityText;
+
+            updateQR();
         }
 
-        if(adultInput && childInput) {
+        if (adultInput && childInput) {
             adultInput.addEventListener('input', updateTotal);
             childInput.addEventListener('input', updateTotal);
+            fullNameInput.addEventListener('input', updateQR);
+            phoneInput.addEventListener('input', updateQR);
             updateTotal();
         }
     })();

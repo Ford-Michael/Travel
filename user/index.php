@@ -54,6 +54,7 @@ $validControllers = [
     'account' => 'AccountController',
     'service' => 'ServiceController',
     'booking' => 'BookingController',
+    'chat'    => 'ChatController',
 ];
 
 // Default actions per controller
@@ -65,6 +66,7 @@ $defaultActions = [
     'account' => 'index',
     'service' => 'carRental',
     'booking' => 'index',
+    'chat'    => 'index',
 ];
 
 // Validate controller

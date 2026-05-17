@@ -32,9 +32,12 @@ $regionLabel = $isDomestic
 $regionUrl = $isDomestic
     ? 'index.php?controller=tour&action=domesticRegion&region=' . urlencode($tour['domesticRegion'] ?? ($domesticMeta['slug'] ?? 'north'))
     : 'index.php?controller=tour&action=continent&region=' . urlencode($tour['continent'] ?? 'asia');
-$adultPrice = (float) ($tour['priceAdult'] ?? 0);
-$childPrice = (float) ($tour['priceChild'] ?? 0);
-$priceGap = max(0, $adultPrice - $childPrice);
+$adultPriceList = (float) ($tour['priceAdult'] ?? 0);
+$childPriceList = (float) ($tour['priceChild'] ?? 0);
+$adultPriceSale = (float) ($tour['priceAdultSale'] ?? $adultPriceList);
+$childPriceSale = (float) ($tour['priceChildSale'] ?? $childPriceList);
+$promoPct = (float) ($tour['promoDiscountPercent'] ?? 0);
+$priceGapSale = max(0, $adultPriceSale - $childPriceSale);
 $reviews = $reviews ?? [];
 $currentUserReview = null;
 if (!empty($user['id'])) {
@@ -67,6 +70,11 @@ if (!empty($user['id'])) {
             <div class="absolute left-6 top-6 rounded-full bg-white/20 px-4 py-2 text-xs font-bold uppercase tracking-[0.24em] text-white backdrop-blur-sm">
                 Featured tour
             </div>
+            <?php if ($promoPct > 0): ?>
+                <div class="absolute left-6 top-16 rounded-full bg-[#ff645a] px-4 py-2 text-xs font-bold uppercase tracking-[0.15em] text-white shadow-lg">
+                    Giảm <?php echo number_format($promoPct, 0); ?>%
+                </div>
+            <?php endif; ?>
             <?php if ($supplementaryCount > 0): ?>
                 <div class="absolute right-6 bottom-6 rounded-full bg-black/50 px-4 py-2 text-xs font-bold text-white backdrop-blur-sm flex items-center gap-2">
                     <span class="material-symbols-outlined text-sm">photo_library</span>
@@ -245,11 +253,11 @@ if (!empty($user['id'])) {
                         <h2 class="font-headline text-3xl font-bold text-slate-900">Binh luan gia ca</h2>
                         <p class="mt-3 max-w-2xl text-base leading-8 text-slate-600">
                             Muc gia hien tai phu hop cho nhom khach uu tien trai nghiem tron goi. Gia nguoi lon dang o muc
-                            <span class="font-bold text-[#ff645a]"><?php echo number_format($adultPrice, 0, ',', '.'); ?> đ</span>,
+                            <span class="font-bold text-[#ff645a]"><?php echo number_format($adultPriceSale, 0, ',', '.'); ?> đ</span>,
                             trong khi gia tre em la
-                            <span class="font-bold text-[#2b5bb5]"><?php echo number_format($childPrice, 0, ',', '.'); ?> đ</span>.
+                            <span class="font-bold text-[#2b5bb5]"><?php echo number_format($childPriceSale, 0, ',', '.'); ?> đ</span>.
                             Chenh lech giua hai muc gia la
-                            <span class="font-bold text-slate-900"><?php echo number_format($priceGap, 0, ',', '.'); ?> đ</span>.
+                            <span class="font-bold text-slate-900"><?php echo number_format($priceGapSale, 0, ',', '.'); ?> đ</span>.
                         </p>
                     </div>
                     <div class="rounded-2xl bg-white/90 px-5 py-4 shadow-sm border border-white">
@@ -258,17 +266,29 @@ if (!empty($user['id'])) {
                     </div>
                 </div>
                 <div class="mt-6 grid gap-4 md:grid-cols-3">
-                    <div class="rounded-2xl bg-white px-5 py-4 shadow-sm border border-slate-100">
+                    <div class="rounded-2xl bg-white px-5 py-4 shadow-sm border border-slate-100 relative overflow-hidden">
+                        <?php if ($promoPct > 0): ?>
+                            <span class="absolute top-0 right-0 bg-[#ff645a] text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg">-<?php echo number_format($promoPct, 0); ?>%</span>
+                        <?php endif; ?>
                         <div class="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-bold">Gia nguoi lon</div>
-                        <p class="mt-2 text-2xl font-black text-[#ff645a]"><?php echo number_format($adultPrice, 0, ',', '.'); ?> đ</p>
+                        <p class="mt-2 text-2xl font-black text-[#ff645a]"><?php echo number_format($adultPriceSale, 0, ',', '.'); ?> đ</p>
+                        <?php if ($promoPct > 0): ?>
+                            <p class="text-sm text-slate-400 line-through"><?php echo number_format($adultPriceList, 0, ',', '.'); ?> đ</p>
+                        <?php endif; ?>
                     </div>
-                    <div class="rounded-2xl bg-white px-5 py-4 shadow-sm border border-slate-100">
+                    <div class="rounded-2xl bg-white px-5 py-4 shadow-sm border border-slate-100 relative overflow-hidden">
+                        <?php if ($promoPct > 0): ?>
+                            <span class="absolute top-0 right-0 bg-[#ff645a] text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg">-<?php echo number_format($promoPct, 0); ?>%</span>
+                        <?php endif; ?>
                         <div class="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-bold">Gia tre em</div>
-                        <p class="mt-2 text-2xl font-black text-[#2b5bb5]"><?php echo number_format($childPrice, 0, ',', '.'); ?> đ</p>
+                        <p class="mt-2 text-2xl font-black text-[#2b5bb5]"><?php echo number_format($childPriceSale, 0, ',', '.'); ?> đ</p>
+                        <?php if ($promoPct > 0): ?>
+                            <p class="text-sm text-slate-400 line-through"><?php echo number_format($childPriceList, 0, ',', '.'); ?> đ</p>
+                        <?php endif; ?>
                     </div>
                     <div class="rounded-2xl bg-white px-5 py-4 shadow-sm border border-slate-100">
                         <div class="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-bold">Chenh lech</div>
-                        <p class="mt-2 text-2xl font-black text-slate-900"><?php echo number_format($priceGap, 0, ',', '.'); ?> đ</p>
+                        <p class="mt-2 text-2xl font-black text-slate-900"><?php echo number_format($priceGapSale, 0, ',', '.'); ?> đ</p>
                     </div>
                 </div>
             </div>
@@ -279,19 +299,31 @@ if (!empty($user['id'])) {
                 <div class="mb-8">
                     <p class="text-xs font-bold uppercase tracking-[0.22em] text-slate-400 mb-2">Starting from</p>
                     <div class="flex items-baseline gap-2">
-                        <span class="text-4xl font-black text-[#ff645a]"><?php echo number_format((float) ($tour['priceAdult'] ?? 0), 0, ',', '.'); ?>đ</span>
+                        <span class="text-4xl font-black text-[#ff645a]"><?php echo number_format($adultPriceSale, 0, ',', '.'); ?>đ</span>
                         <span class="text-sm text-slate-400">/ pax</span>
                     </div>
+                    <?php if ($promoPct > 0): ?>
+                        <div class="mt-1 flex items-center gap-2">
+                            <span class="text-sm font-medium text-slate-400 line-through"><?php echo number_format($adultPriceList, 0, ',', '.'); ?>đ</span>
+                            <span class="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-bold text-red-700 ring-1 ring-inset ring-red-600/10">Khuyến mãi -<?php echo number_format($promoPct, 0); ?>%</span>
+                        </div>
+                    <?php endif; ?>
                 </div>
 
                 <div class="space-y-4 mb-8">
                     <div class="rounded-2xl bg-slate-50 px-4 py-4">
                         <div class="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-bold">Gia nguoi lon</div>
-                        <div class="mt-2 text-lg font-bold text-slate-900"><?php echo number_format((float) ($tour['priceAdult'] ?? 0), 0, ',', '.'); ?> đ</div>
+                        <div class="mt-2 text-lg font-bold text-slate-900"><?php echo number_format($adultPriceSale, 0, ',', '.'); ?> đ</div>
+                        <?php if ($promoPct > 0): ?>
+                            <div class="text-sm text-slate-400 line-through"><?php echo number_format($adultPriceList, 0, ',', '.'); ?> đ</div>
+                        <?php endif; ?>
                     </div>
                     <div class="rounded-2xl bg-slate-50 px-4 py-4">
                         <div class="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-bold">Gia tre em</div>
-                        <div class="mt-2 text-lg font-bold text-slate-900"><?php echo number_format((float) ($tour['priceChild'] ?? 0), 0, ',', '.'); ?> đ</div>
+                        <div class="mt-2 text-lg font-bold text-slate-900"><?php echo number_format($childPriceSale, 0, ',', '.'); ?> đ</div>
+                        <?php if ($promoPct > 0): ?>
+                            <div class="text-sm text-slate-400 line-through"><?php echo number_format($childPriceList, 0, ',', '.'); ?> đ</div>
+                        <?php endif; ?>
                     </div>
                 </div>
 

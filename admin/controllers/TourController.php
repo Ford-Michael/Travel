@@ -31,10 +31,6 @@ class TourController extends Controller {
         // Use the main image
         foreach ($tours as &$tour) {
             $tour['firstImage'] = $this->tourModel->getDisplayImageUrl($tour);
-            if (empty($tour['imageURL']) && !empty($tour['firstImage'])) {
-                $this->tourModel->backfillMainImageUrl($tour['tourID'], $tour['firstImage']);
-                $tour['imageURL'] = $tour['firstImage'];
-            }
         }
         unset($tour);
         
@@ -100,19 +96,15 @@ class TourController extends Controller {
         $tourId = $this->tourModel->create($data);
 
         if ($tourId) {
-            $mainImageUrl = null;
-
             // Handle main image upload
             if (!empty($_FILES['mainImage']['name']) && $_FILES['mainImage']['error'] === UPLOAD_ERR_OK) {
                 $uploadResult = $this->uploadTourImage($_FILES['mainImage'], $tourId);
                 if ($uploadResult['success']) {
-                    $mainImageUrl = $uploadResult['url'];
-                    $this->tourModel->update($tourId, ['imageURL' => $mainImageUrl]);
+                    $this->tourModel->update($tourId, ['imageURL' => $uploadResult['url']]);
                 }
             }
 
             // Handle multiple image uploads (secondary images up to 10)
-            $firstGalleryImageUrl = null;
             if (!empty($_FILES['tourImages']['name'][0])) {
                 $files = $_FILES['tourImages'];
                 $count = min(count($files['name']), 10);
@@ -127,25 +119,18 @@ class TourController extends Controller {
                         ];
                         $uploadResult = $this->uploadTourImage($singleFile, $tourId);
                         if ($uploadResult['success']) {
-                            if ($firstGalleryImageUrl === null) {
-                                $firstGalleryImageUrl = $uploadResult['url'];
-                            }
                             $this->tourModel->addImage($tourId, $uploadResult['url'], '');
                         }
                     }
                 }
             }
-
-            if ($mainImageUrl === null && $firstGalleryImageUrl !== null) {
-                $this->tourModel->update($tourId, ['imageURL' => $firstGalleryImageUrl]);
-            }
             
             // Save itinerary data
             $itineraryData = $_POST['itinerary'] ?? [];
             if (!empty($itineraryData) && is_array($itineraryData)) {
-                $preparedItinerary = [];
+                $sortOrder = 0;
                 foreach ($itineraryData as $dayNumber => $dayData) {
-                    $day = intval($dayData['dayNumber'] ?? $dayNumber);
+                    $day = intval($dayNumber);
                     $title = $this->sanitize($dayData['title'] ?? '');
                     $description = $this->sanitize($dayData['description'] ?? '');
 
@@ -153,26 +138,12 @@ class TourController extends Controller {
                         continue;
                     }
 
-                    $preparedItinerary[] = [
-                        'day' => $day > 0 ? $day : 1,
-                        'title' => $title,
-                        'description' => $description,
-                    ];
-                }
-
-                usort($preparedItinerary, function ($a, $b) {
-                    return $a['day'] <=> $b['day'];
-                });
-
-                $sortOrder = 0;
-                foreach ($preparedItinerary as $item) {
-                    $day = (int) $item['day'];
                     $sortOrder++;
                     $this->tourModel->addItineraryItem([
                         'tourID' => $tourId,
                         'dayNumber' => $day,
-                        'title' => $item['title'] !== '' ? $item['title'] : 'Ngay ' . $day,
-                        'description' => $item['description'],
+                        'title' => $title !== '' ? $title : 'Ngay ' . $day,
+                        'description' => $description,
                         'time' => null,
                         'location' => '',
                         'sortOrder' => $sortOrder
@@ -241,12 +212,7 @@ class TourController extends Controller {
             $this->setFlash('danger', 'Tour not found.');
             $this->redirect('index.php?controller=tour');
         }
-
         $tour['displayImageURL'] = $this->tourModel->getDisplayImageUrl($tour);
-        if (empty($tour['imageURL']) && !empty($tour['displayImageURL'])) {
-            $this->tourModel->backfillMainImageUrl($tour['tourID'], $tour['displayImageURL']);
-            $tour['imageURL'] = $tour['displayImageURL'];
-        }
 
         $this->view('tours/edit', [
             'title' => 'Edit Tour',
@@ -633,6 +599,54 @@ class TourController extends Controller {
         }
 
         $this->redirect('index.php?controller=tour&action=itinerary&id=' . $tourId);
+    }
+
+    /**
+     * Show merge tour form
+     */
+    public function merge() {
+        $this->requireAuth();
+        
+        $tours = $this->tourModel->findAll('tourID DESC');
+        
+        $this->view('tours/merge', [
+            'title' => 'Gộp Tour',
+            'tours' => $tours,
+            'admin' => $this->getCurrentAdmin(),
+            'flash' => $this->getFlash()
+        ]);
+    }
+
+    /**
+     * Process tour merging
+     */
+    public function processMerge() {
+        $this->requireAuth();
+        
+        if (!$this->isPost()) {
+            $this->redirect('index.php?controller=tour&action=merge');
+        }
+
+        $primaryId = $this->post('primaryTourID');
+        $secondaryId = $this->post('secondaryTourID');
+
+        if (!$primaryId || !$secondaryId) {
+            $this->setFlash('danger', 'Vui lòng chọn cả hai tour.');
+            $this->redirect('index.php?controller=tour&action=merge');
+        }
+
+        if ($primaryId === $secondaryId) {
+            $this->setFlash('danger', 'Không thể gộp một tour vào chính nó.');
+            $this->redirect('index.php?controller=tour&action=merge');
+        }
+
+        if ($this->tourModel->mergeTours($primaryId, $secondaryId)) {
+            $this->setFlash('success', 'Gộp tour thành công! Tour cũ đã được tắt trạng thái hoạt động.');
+            $this->redirect('index.php?controller=tour&action=show&id=' . $primaryId);
+        } else {
+            $this->setFlash('danger', 'Có lỗi xảy ra trong quá trình gộp.');
+            $this->redirect('index.php?controller=tour&action=merge');
+        }
     }
 }
 

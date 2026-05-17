@@ -14,9 +14,14 @@ ob_start();
                 <h1 class="h3 mb-1 text-white font-weight-bold"><i class="fas fa-map-marked-alt mr-2"></i>Tours Management</h1>
                 <p class="text-white-50 mb-0">Manage and organize all your travel tour packages</p>
             </div>
-            <a href="index.php?controller=tour&action=create" class="btn btn-light btn-sm shadow-sm">
-                <i class="fas fa-plus fa-sm mr-1"></i> Add New Tour
-            </a>
+            <div class="d-flex" style="gap: 10px;">
+                <a href="index.php?controller=tour&action=merge" class="btn btn-warning btn-sm shadow-sm text-dark font-weight-bold">
+                    <i class="fas fa-object-group fa-sm mr-1"></i> Gộp Tour
+                </a>
+                <a href="index.php?controller=tour&action=create" class="btn btn-light btn-sm shadow-sm">
+                    <i class="fas fa-plus fa-sm mr-1"></i> Add New Tour
+                </a>
+            </div>
         </div>
     </div>
 </div>
@@ -74,10 +79,11 @@ ob_start();
                 </thead>
                 <tbody>
                     <?php foreach ($tours as $tour): ?>
+                    <?php $listImageUrl = $tour['displayImageURL'] ?? ($tour['imageURL'] ?? ($tour['firstImage'] ?? '')); ?>
                     <tr>
                         <td class="text-center">
-                            <?php if (!empty($tour['firstImage'])): ?>
-                                <img src="<?php echo htmlspecialchars($tour['firstImage']); ?>" 
+                            <?php if (!empty($listImageUrl)): ?>
+                                <img src="<?php echo htmlspecialchars($listImageUrl); ?>" 
                                      alt="Tour" 
                                      style="width: 60px; height: 45px; object-fit: cover; border-radius: 4px;">
                             <?php else: ?>

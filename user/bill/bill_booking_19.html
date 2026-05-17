@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hóa đơn HD-000019 — Travel Bling</title>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Be Vietnam Pro', sans-serif; background: #f1f5f9; padding: 30px; }
+        .bill-page { max-width: 800px; margin: 0 auto; background: #fff; border: 1px solid #e2e8f0; }
+        .bar { background: linear-gradient(135deg, #6b46a0, #9b6fc0); height: 5px; }
+        .section-title { background: linear-gradient(135deg, #7c5ba6, #9b6fc0); color: #fff; padding: 8px 16px; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; border-radius: 6px 6px 0 0; }
+        .bill-table { width: 100%; border-collapse: collapse; }
+        .bill-table th, .bill-table td { border: 1px solid #c4b5d4; padding: 10px 14px; text-align: left; font-size: 13px; }
+        .bill-table th { background: linear-gradient(135deg, #7c5ba6, #9b6fc0); color: #fff; font-weight: 600; text-transform: uppercase; font-size: 12px; }
+        .bill-table tbody tr:nth-child(even) { background: #faf8fd; }
+        .totals-table { width: 100%; border-collapse: collapse; }
+        .totals-table td { padding: 8px 16px; font-size: 13px; border-bottom: 1px solid #e8e0f0; }
+        .total-label { text-align: right; color: #475569; font-weight: 500; }
+        .total-value { text-align: right; color: #1e293b; font-weight: 600; width: 160px; }
+        .grand-total td { background: linear-gradient(135deg, #7c5ba6, #9b6fc0); color: #fff !important; font-weight: 800; font-size: 15px; border: none; }
+        .info-label { color: #6b46a0; font-weight: 600; font-size: 11px; text-transform: uppercase; }
+        .info-value { color: #1e293b; font-weight: 500; margin-left: 8px; }
+        .info-cell { padding: 10px 16px; border-bottom: 1px solid #e8e0f0; font-size: 13px; }
+        .sig-area { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; text-align: center; margin-top: 40px; padding: 0 40px; }
+        .sig-title { font-weight: 700; color: #1e293b; font-size: 14px; margin-bottom: 4px; }
+        .sig-note { font-size: 11px; color: #94a3b8; font-style: italic; }
+        .sig-space { height: 60px; }
+        @media print { body { padding: 0; background: #fff; } .bill-page { border: none; box-shadow: none; } .no-print { display: none !important; } }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="max-width:800px;margin:0 auto 16px;text-align:right;">
+        <button onclick="window.print()" style="padding:8px 20px;background:#6b46a0;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;">🖨️ In hóa đơn</button>
+    </div>
+    <div class="bill-page">
+        <div class="bar"></div>
+
+        <div style="padding:30px 40px 20px;display:flex;align-items:flex-start;gap:24px;">
+            <div style="flex-shrink:0;font-size:24px;font-weight:900;color:#6b46a0;font-family:'Plus Jakarta Sans',sans-serif;">✈ TRAVEL.BLING</div>
+            <div style="flex:1;text-align:right;">
+                <h2 style="margin:0;font-size:18px;font-weight:800;color:#6b46a0;font-family:'Plus Jakarta Sans',sans-serif;">Công ty cổ phần Travel.Bling</h2>
+                <p style="margin:4px 0 0;font-size:11px;color:#64748b;line-height:1.6;">Số 78, Phố Hàng Mơ, Thành phố Hà Nội<br>SĐT: 0365690399 | Email: info@travelbling.com<br>Website: travel.bling</p>
+            </div>
+        </div>
+
+        <div style="margin:0 40px;border-top:2px solid #7c5ba6;"></div>
+
+        <h1 style="text-align:center;font-size:26px;font-weight:900;color:#1e293b;margin:24px 0 6px;font-family:'Plus Jakarta Sans',sans-serif;">HÓA ĐƠN THANH TOÁN</h1>
+        <p style="text-align:center;font-size:11px;color:#94a3b8;margin:0 0 24px;">Payment Invoice</p>
+
+        <div style="padding:0 40px 40px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;">
+                <div>
+                    <div class="section-title">Thông tin khách hàng</div>
+                    <div style="border:1px solid #c4b5d4;border-top:none;border-radius:0 0 6px 6px;">
+                        <div class="info-cell"><span class="info-label">Người liên hệ:</span><span class="info-value">Lâm Mặc Ngữ</span></div>
+                        <div class="info-cell"><span class="info-label">Công ty/Nhóm:</span><span class="info-value">Khách lẻ</span></div>
+                        <div class="info-cell"><span class="info-label">Địa chỉ:</span><span class="info-value">few</span></div>
+                        <div class="info-cell"><span class="info-label">Điện thoại:</span><span class="info-value">034987846121</span></div>
+                        <div class="info-cell" style="border-bottom:none;"><span class="info-label">Email:</span><span class="info-value">mimi@gmail.com</span></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="section-title">Chi tiết hóa đơn</div>
+                    <div style="border:1px solid #c4b5d4;border-top:none;border-radius:0 0 6px 6px;">
+                        <div class="info-cell"><span class="info-label">Ngày lập:</span><span class="info-value">11/05/2026</span></div>
+                        <div class="info-cell"><span class="info-label">Mã hóa đơn:</span><span class="info-value" style="color:#6b46a0;font-weight:700;">HD-000019</span></div>
+                        <div class="info-cell"><span class="info-label">Tiền tệ:</span><span class="info-value">VNĐ</span></div>
+                        <div class="info-cell"><span class="info-label">Hạn thanh toán:</span><span class="info-value" style="color:#dc2626;">14/05/2026</span></div>
+                        <div class="info-cell" style="border-bottom:none;"><span class="info-label">Hành trình:</span><span class="info-value">Hải Đảo</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-bottom:24px;">
+                <div class="section-title">Thông tin dịch vụ</div>
+                <table class="bill-table">
+                    <thead><tr><th style="width:90px;">Ngày</th><th>Mô tả dịch vụ</th><th style="width:50px;text-align:center;">SL</th><th style="width:120px;text-align:right;">Đơn giá</th><th style="width:130px;text-align:right;">Thành tiền</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td>11/05/2026</td>
+                            <td><strong>Phú Quốc - Nghìn lẻ một đêm</strong><br><span style="font-size:11px;color:#64748b;">Vé người lớn — Hải Đảo5 ngày 4 đêm</span></td>
+                            <td style="text-align:center;font-weight:600;">1</td>
+                            <td style="text-align:right;">54.000.000₫</td>
+                            <td style="text-align:right;font-weight:700;">54.000.000₫</td>
+                        </tr>
+                        
+                        <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:32px;">
+                <div>
+                    <div class="section-title">Ghi chú & Điều khoản</div>
+                    <div style="border:1px solid #c4b5d4;border-top:none;border-radius:0 0 6px 6px;padding:14px 16px;font-size:12px;color:#475569;line-height:1.7;">
+                        <p style="margin:0 0 8px;"><strong>•</strong> Vui lòng thanh toán <strong style="color:#6b46a0;">40%</strong> giá trị hóa đơn trước ngày: <strong>14/05/2026</strong></p>
+                        
+                        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e8e0f0;">
+                            <p style="margin:0;font-weight:600;color:#1e293b;">Thông tin chuyển khoản:</p>
+                            <p style="margin:4px 0 0;font-size:11px;line-height:1.8;"><em>Ngân hàng:</em> TMCP Ngoại thương Việt Nam (VCB)<br><em>Số tài khoản:</em> <strong style="color:#6b46a0;">1032059594</strong><br><em>Tên tài khoản:</em> <strong>NGUYEN VAN HAI</strong></p>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <table class="totals-table" style="border:1px solid #c4b5d4;border-radius:6px;overflow:hidden;">
+                        <tr><td class="total-label">Cộng tiền hàng</td><td class="total-value">54.000.000₫</td></tr>
+                        <tr><td class="total-label">Chiết khấu (5%)</td><td class="total-value" style="color:#16a34a;">- 2.700.000₫</td></tr>
+                        <tr><td class="total-label">Trị giá tính thuế</td><td class="total-value">51.300.000₫</td></tr>
+                        <tr><td class="total-label">Thuế GTGT (10%)</td><td class="total-value" style="color:#dc2626;">+ 5.130.000₫</td></tr>
+                        <tr class="grand-total"><td style="text-align:right;padding:12px 16px;">TỔNG CỘNG</td><td style="text-align:right;padding:12px 16px;">56.430.000₫</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <p style="text-align:center;font-size:12px;color:#dc2626;font-style:italic;margin-bottom:12px;">"Tôi cam đoan các thông tin cung cấp trên đây là hoàn toàn đúng sự thật và chính xác."</p>
+
+            <div class="sig-area">
+                <div><div class="sig-title">Đại diện Khách hàng</div><div class="sig-note">(Ký & Ghi rõ họ tên)</div><div class="sig-space"></div></div>
+                <div><div class="sig-title">Đại diện Công ty</div><div class="sig-note">(Ký, đóng dấu & Ghi rõ họ tên)</div><div class="sig-space"></div></div>
+            </div>
+        </div>
+
+        <div class="bar"></div>
+    </div>
+</body>
+</html>

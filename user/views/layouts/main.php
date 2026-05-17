@@ -427,9 +427,9 @@ if ((!isset($user) || !$user) && !empty($_SESSION['user_id'])) {
                         <li><a class="hover:text-[#ff645a] transition-all duration-300 underline-offset-4 hover:underline"
                                 href="index.php?controller=home&action=about">Về Chúng Tôi</a></li>
                         <li><a class="hover:text-[#ff645a] transition-all duration-300 underline-offset-4 hover:underline"
-                                href="#">Điều khoản dịch vụ</a></li>
+                                href="index.php?controller=home&action=terms">Điều khoản dịch vụ</a></li>
                         <li><a class="hover:text-[#ff645a] transition-all duration-300 underline-offset-4 hover:underline"
-                                href="#">Chính sách bảo mật</a></li>
+                                href="index.php?controller=home&action=privacy">Chính sách bảo mật</a></li>
                         <li><a class="hover:text-[#ff645a] transition-all duration-300 underline-offset-4 hover:underline"
                                 href="index.php?controller=home&action=contact">Hỗ Trợ</a></li>
                     </ul>
@@ -475,6 +475,7 @@ if ((!isset($user) || !$user) && !empty($_SESSION['user_id'])) {
             }
         }, 4000);
     </script>
+    <?php require_once __DIR__ . '/../chat/widget.php'; ?>
 </body>
 
 </html>

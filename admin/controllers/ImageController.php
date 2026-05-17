@@ -23,6 +23,11 @@ class ImageController extends Controller {
         $page = $this->get('page', 1);
         $limit = 20;
         $images = $this->imageModel->getAllWithPagination($page, $limit);
+        foreach ($images as &$image) {
+            $image['displayImageUrl'] = $this->resolveDisplayImageUrl($image['imageURL'] ?? '');
+        }
+        unset($image);
+
         $totalImages = $this->imageModel->getCount();
         $totalPages = ceil($totalImages / $limit);
         
@@ -103,7 +108,7 @@ class ImageController extends Controller {
                 $targetFile = $uploadDir . $filename;
                 
                 if (move_uploaded_file($_FILES['image']['tmp_name'], $targetFile)) {
-                    $imagePath = 'img/tours/' . $filename;
+                    $imagePath = $this->getPublicBasePath() . '/img/tours/' . $filename;
                 } else {
                     $errors[] = 'Failed to upload image.';
                 }
@@ -153,8 +158,8 @@ class ImageController extends Controller {
         $image = $this->imageModel->getById($id);
         if ($image && !empty($image['imageURL'])) {
             // Delete physical file
-            $filePath = __DIR__ . '/../../' . $image['imageURL'];
-            if (file_exists($filePath)) {
+            $filePath = $this->resolveImageFilePath($image['imageURL']);
+            if ($filePath !== '' && file_exists($filePath)) {
                 unlink($filePath);
             }
         }
@@ -168,5 +173,65 @@ class ImageController extends Controller {
         }
 
         $this->redirect('index.php?controller=image');
+    }
+
+    private function getPublicBasePath() {
+        $adminBasePath = (string) parse_url(BASE_URL, PHP_URL_PATH);
+        $adminBasePath = rtrim(str_replace('\\', '/', $adminBasePath), '/');
+        $publicBasePath = str_replace('\\', '/', dirname($adminBasePath));
+
+        if ($publicBasePath === '.' || $publicBasePath === '/' || $publicBasePath === '\\') {
+            return '';
+        }
+
+        return rtrim($publicBasePath, '/');
+    }
+
+    private function resolveDisplayImageUrl($imageUrl) {
+        $imageUrl = trim((string) $imageUrl);
+        if ($imageUrl === '') {
+            return '';
+        }
+
+        if (preg_match('#^(?:https?:)?//#i', $imageUrl) || strpos($imageUrl, 'data:') === 0) {
+            return $imageUrl;
+        }
+
+        $normalizedPath = str_replace('\\', '/', (string) parse_url($imageUrl, PHP_URL_PATH));
+        if ($normalizedPath === '') {
+            return '';
+        }
+
+        if ($normalizedPath[0] === '/') {
+            return $normalizedPath;
+        }
+
+        if (strpos($normalizedPath, 'img/') === 0) {
+            return $this->getPublicBasePath() . '/' . ltrim($normalizedPath, '/');
+        }
+
+        return $this->getPublicBasePath() . '/img/tours/' . basename($normalizedPath);
+    }
+
+    private function resolveImageFilePath($imageUrl) {
+        $imageUrl = trim((string) $imageUrl);
+        if ($imageUrl === '' || preg_match('#^(?:https?:)?//#i', $imageUrl) || strpos($imageUrl, 'data:') === 0) {
+            return '';
+        }
+
+        $normalizedPath = str_replace('\\', '/', (string) parse_url($imageUrl, PHP_URL_PATH));
+        $publicBasePath = $this->getPublicBasePath();
+
+        if ($publicBasePath !== '' && strpos($normalizedPath, $publicBasePath . '/') === 0) {
+            $normalizedPath = substr($normalizedPath, strlen($publicBasePath) + 1);
+        } else {
+            $normalizedPath = ltrim($normalizedPath, '/');
+        }
+
+        if ($normalizedPath === '') {
+            return '';
+        }
+
+        return dirname(__DIR__, 2) . '/' . $normalizedPath;
     }
 }

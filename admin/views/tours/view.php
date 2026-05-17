@@ -116,7 +116,7 @@ $primaryImageUrl = $tour['displayImageURL'] ?? ($tour['imageURL'] ?? null);
                     <?php foreach ($tour['images'] as $image): ?>
                     <div class="col-md-4 mb-3">
                         <div class="card h-100">
-                            <img src="<?php echo htmlspecialchars($image['imageURL']); ?>" 
+                            <img src="<?php echo htmlspecialchars($image['displayImageURL'] ?? $image['imageURL']); ?>" 
                                  class="card-img-top" alt="Tour Image"
                                  style="height: 200px; object-fit: cover;">
                             <?php if ($image['description']): ?>
@@ -154,10 +154,8 @@ $primaryImageUrl = $tour['displayImageURL'] ?? ($tour['imageURL'] ?? null);
                 </a>
             </div>
             <div class="card-body">
-                <?php 
-                $itineraries = (new TourModel())->getItinerary($tour['tourID']);
-                if (!empty($itineraries)): 
-                ?>
+                <?php $itineraries = $tour['itinerary'] ?? []; ?>
+                <?php if (!empty($itineraries)): ?>
                     <div class="timeline border-left ml-3 pl-3" style="border-left: 2px solid #4e73df;">
                         <?php foreach($itineraries as $item): ?>
                         <div class="timeline-item mb-4 position-relative">
@@ -165,8 +163,8 @@ $primaryImageUrl = $tour['displayImageURL'] ?? ($tour['imageURL'] ?? null);
                                 Day <?php echo htmlspecialchars($item['dayNumber']); ?> - <?php echo htmlspecialchars($item['title']); ?>
                             </h6>
                             <p class="mb-2 text-gray-700"><?php echo nl2br(htmlspecialchars($item['description'])); ?></p>
-                            <?php if(!empty($item['imageURL'])): ?>
-                            <img src="<?php echo htmlspecialchars($item['imageURL']); ?>" alt="Itinerary Image" class="img-fluid rounded mt-2 shadow-sm" style="max-height: 200px; object-fit: cover;">
+                            <?php if(!empty($item['displayImageURL'] ?? $item['imageURL'])): ?>
+                            <img src="<?php echo htmlspecialchars($item['displayImageURL'] ?? $item['imageURL']); ?>" alt="Itinerary Image" class="img-fluid rounded mt-2 shadow-sm" style="max-height: 200px; object-fit: cover;">
                             <?php endif; ?>
                         </div>
                         <?php endforeach; ?>
@@ -307,7 +305,7 @@ $primaryImageUrl = $tour['displayImageURL'] ?? ($tour['imageURL'] ?? null);
             <?php foreach ($tour['images'] as $image): ?>
             <div class="col-md-3 mb-3">
                 <div class="card h-100">
-                    <img src="<?php echo htmlspecialchars($image['imageURL']); ?>" 
+                    <img src="<?php echo htmlspecialchars($image['displayImageURL'] ?? $image['imageURL']); ?>" 
                          class="card-img-top" alt="Tour Image"
                          style="height: 150px; object-fit: cover;">
                     <div class="card-body p-2">

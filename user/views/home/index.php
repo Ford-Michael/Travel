@@ -182,9 +182,12 @@ $heroSlides = [
                                     <span class="material-symbols-outlined text-white text-6xl">landscape</span>
                                 </div>
                             <?php endif; ?>
-                            <?php if (!empty($tour['badge'])): ?>
-                                <div
-                                    class="absolute top-4 left-4 glass-badge px-3 py-1 rounded-full text-xs font-bold text-white uppercase tracking-wider">
+                            <?php if (!empty($tour['promoDiscountPercent'])): ?>
+                                <div class="absolute top-4 right-4 bg-[#ff645a] px-3 py-1 rounded-full text-xs font-bold text-white uppercase shadow-lg">
+                                    Giảm <?php echo number_format($tour['promoDiscountPercent'], 0); ?>%
+                                </div>
+                            <?php elseif (!empty($tour['badge'])): ?>
+                                <div class="absolute top-4 right-4 glass-badge px-3 py-1 rounded-full text-xs font-bold text-white uppercase tracking-wider">
                                     <?php echo htmlspecialchars($tour['badge']); ?>
                                 </div>
                             <?php endif; ?>
@@ -211,6 +214,9 @@ $heroSlides = [
                                     <span class="text-on-primary-container font-headline font-bold text-2xl">
                                         <?php echo formatPrice($tour['price'] ?? 0); ?>
                                     </span>
+                                    <?php if (!empty($tour['promoDiscountPercent'])): ?>
+                                        <span class="text-xs text-slate-400 line-through block mt-1"><?php echo formatPrice($tour['priceAdult'] ?? 0); ?></span>
+                                    <?php endif; ?>
                                 </div>
                                 <span
                                     class="bg-secondary text-white p-3 rounded-lg group-hover:bg-on-secondary-fixed transition-colors">
@@ -613,32 +619,53 @@ $heroSlides = [
 <!-- ===== OTHER SERVICES ===== -->
 <section class="py-24 bg-white">
     <div class="max-w-7xl mx-auto px-8">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <a href="#" class="relative rounded-2xl overflow-hidden h-48 group cursor-pointer block">
+        <h2 class="text-on-secondary-fixed font-headline font-bold text-4xl mb-16 text-center uppercase tracking-tight">Dịch Vụ Nổi Bật</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <!-- Visa -->
+            <a href="index.php?controller=service&action=visa" class="relative rounded-2xl overflow-hidden h-64 group cursor-pointer block">
                 <img alt="Dịch vụ Visa"
-                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                     src="https://lh3.googleusercontent.com/aida-public/AB6AXuBC3c9WIAQQYamH4--bIU9lyGNxBfakJA5fMVVRQ5dcWC5QQAzBgYmx684hlUrxNa0YjygI5D1GGy2s9f1WpxkdmcILSFr3OEiioGYpSvPYXCRVHRfdArWBhZC61Z1DsDQUzOiaIutwPcoPyivSwgPXyLr6UAMid9JjmPTstx3Ni9N5GWkCuJDuCjM8hEn9x_mAAOxMNQamWPd1qdSp7VjE__8UxL4ZJhnfsldBDHuDpPyZBgGUS2B-xrrMethr0LTIjR0N02eSuqK3" />
                 <div
-                    class="absolute inset-0 bg-black/40 flex items-center justify-center hover:bg-black/50 transition-colors">
-                    <h4 class="text-white font-headline font-bold text-2xl uppercase tracking-widest">Dịch Vụ Visa</h4>
+                    class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col items-center justify-end pb-8 group-hover:from-secondary/90 transition-all duration-500">
+                    <span class="material-symbols-outlined text-white text-5xl mb-3 group-hover:-translate-y-2 transition-transform duration-300">description</span>
+                    <h4 class="text-white font-headline font-bold text-lg md:text-xl uppercase tracking-widest text-center">Dịch Vụ Visa</h4>
                 </div>
             </a>
-            <a href="#" class="relative rounded-2xl overflow-hidden h-48 group cursor-pointer block">
+            
+            <!-- Flight -->
+            <a href="index.php?controller=service&action=flight" class="relative rounded-2xl overflow-hidden h-64 group cursor-pointer block">
                 <img alt="Vé máy bay"
-                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                     src="https://lh3.googleusercontent.com/aida-public/AB6AXuCIlNIOEbW_0SV1GQNFW16t-dmg2XdvCimYqkIeZIOJwJ32nBV-91lgmQ9Bi1lRl5XVFKlzOiHu13p6U9h9u-DpUyrysm43UnLtmy7mgxwFzgkEgkDp-PyMV9McpqrCkNPCxyoYTr9EhQH3sjBrlsWkG-xA-9pjNuQs_XydiAKkGfVkjfhxMR8S4CO3ezrHP60w6IQo0zSdXU4ZYl-Q4pP6T3mJ7xWgsmsuNqQxVo2hAwmXyxMenfRszp-rP0qsYH9JYti23SvpuomD" />
                 <div
-                    class="absolute inset-0 bg-black/40 flex items-center justify-center hover:bg-black/50 transition-colors">
-                    <h4 class="text-white font-headline font-bold text-2xl uppercase tracking-widest">Vé Máy Bay</h4>
+                    class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col items-center justify-end pb-8 group-hover:from-secondary/90 transition-all duration-500">
+                    <span class="material-symbols-outlined text-white text-5xl mb-3 group-hover:-translate-y-2 transition-transform duration-300">flight</span>
+                    <h4 class="text-white font-headline font-bold text-lg md:text-xl uppercase tracking-widest text-center">Vé Máy Bay</h4>
                 </div>
             </a>
-            <a href="#" class="relative rounded-2xl overflow-hidden h-48 group cursor-pointer block">
+            
+            <!-- Hotel -->
+            <a href="index.php?controller=service&action=hotel" class="relative rounded-2xl overflow-hidden h-64 group cursor-pointer block">
                 <img alt="Khách sạn"
-                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                     src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvACZ315tapQ7MphcbYB3R3umriDT0GuIiN_9T5bdXUATlnwfxX5Ro1Pw_awgNobHnVWKZeYRoqGZyh2CrSLmJCP-EyVVy_KnnV3wvPG4JX0QQ43fd6ifHdyaeGzcsc18bCGktGNDDgSEIC0zxRKKIoRqGOXBszNo5iWgxJhqdI97dFWB5qHWlmPlPqKeeF3vy4a4QPUTt_WakLGUcg9Hpxt1pHBIIbYx1ugfyQM011xarf3yZwrOI9aMujOtI1l2rXjDR-hEWqX3y" />
                 <div
-                    class="absolute inset-0 bg-black/40 flex items-center justify-center hover:bg-black/50 transition-colors">
-                    <h4 class="text-white font-headline font-bold text-2xl uppercase tracking-widest">Khách Sạn</h4>
+                    class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col items-center justify-end pb-8 group-hover:from-secondary/90 transition-all duration-500">
+                    <span class="material-symbols-outlined text-white text-5xl mb-3 group-hover:-translate-y-2 transition-transform duration-300">hotel</span>
+                    <h4 class="text-white font-headline font-bold text-lg md:text-xl uppercase tracking-widest text-center">Khách Sạn</h4>
+                </div>
+            </a>
+
+            <!-- Car Rental -->
+            <a href="index.php?controller=service&action=carRental" class="relative rounded-2xl overflow-hidden h-64 group cursor-pointer block">
+                <img alt="Thuê xe"
+                    class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    src="https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=800&q=80" />
+                <div
+                    class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col items-center justify-end pb-8 group-hover:from-secondary/90 transition-all duration-500">
+                    <span class="material-symbols-outlined text-white text-5xl mb-3 group-hover:-translate-y-2 transition-transform duration-300">directions_car</span>
+                    <h4 class="text-white font-headline font-bold text-lg md:text-xl uppercase tracking-widest text-center">Thuê Xe</h4>
                 </div>
             </a>
         </div>

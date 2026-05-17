@@ -133,9 +133,9 @@ ob_start();
                                         </div>
                                         <?php endif; ?>
                                         
-                                        <?php if (!empty($item['imageURL'])): ?>
+                                        <?php if (!empty($item['displayImageURL'] ?? $item['imageURL'])): ?>
                                         <div class="mt-3">
-                                            <img src="<?php echo htmlspecialchars($item['imageURL']); ?>" class="img-fluid rounded shadow-sm" style="max-height: 150px; object-fit: cover;" alt="Itinerary Image">
+                                            <img src="<?php echo htmlspecialchars($item['displayImageURL'] ?? $item['imageURL']); ?>" class="img-fluid rounded shadow-sm" style="max-height: 150px; object-fit: cover;" alt="Itinerary Image">
                                         </div>
                                         <?php endif; ?>
                                     </div>

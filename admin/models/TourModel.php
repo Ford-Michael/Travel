@@ -89,7 +89,7 @@ class TourModel extends Model {
      */
     public function getDisplayImageUrl(array $tour) {
         if (!empty($tour['imageURL'])) {
-            return $tour['imageURL'];
+            return $this->resolveImageUrl($tour['imageURL']);
         }
 
         $tourId = (int) ($tour['tourID'] ?? 0);
@@ -103,7 +103,36 @@ class TourModel extends Model {
         );
         $imageUrl = $stmt->fetchColumn();
 
-        return $imageUrl ?: null;
+        return $imageUrl ? $this->resolveImageUrl($imageUrl) : null;
+    }
+
+    private function resolveImageUrl($imageUrl) {
+        $imageUrl = trim((string) $imageUrl);
+        if ($imageUrl === '') {
+            return '';
+        }
+
+        if (preg_match('#^https?://#i', $imageUrl)) {
+            return $imageUrl;
+        }
+
+        if (strpos($imageUrl, '/travel.bling/') === 0) {
+            return $imageUrl;
+        }
+
+        if (strpos($imageUrl, 'travel.bling/') === 0) {
+            return '/' . ltrim($imageUrl, '/');
+        }
+
+        if (strpos($imageUrl, '/img/') === 0) {
+            return '/travel.bling' . $imageUrl;
+        }
+
+        if (strpos($imageUrl, 'img/') === 0) {
+            return '/travel.bling/' . ltrim($imageUrl, '/');
+        }
+
+        return $imageUrl;
     }
 
     /**
@@ -421,6 +450,41 @@ class TourModel extends Model {
             return $this->db->lastInsertId();
         } catch (\PDOException $e) {
             error_log("Error adding itinerary: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Merge secondary tour data into primary tour
+     */
+    public function mergeTours($primaryId, $secondaryId) {
+        $primaryId = (int)$primaryId;
+        $secondaryId = (int)$secondaryId;
+        
+        if ($primaryId === $secondaryId || $primaryId <= 0 || $secondaryId <= 0) {
+            return false;
+        }
+
+        try {
+            $this->db->beginTransaction();
+
+            // Update foreign keys in all related tables
+            $tables = ['Booking', 'Fashion', 'History', 'Images', 'Promotion', 'Review', 'TourItinerary'];
+            
+            foreach ($tables as $tbl) {
+                $sql = "UPDATE {$tbl} SET tourID = :primary WHERE tourID = :secondary";
+                $this->query($sql, ['primary' => $primaryId, 'secondary' => $secondaryId]);
+            }
+
+            // Deactivate or delete the secondary tour
+            $sql = "UPDATE {$this->table} SET availability = 0, title = CONCAT(title, ' (Merged into #', :primary, ')') WHERE tourID = :secondary";
+            $this->query($sql, ['primary' => $primaryId, 'secondary' => $secondaryId]);
+
+            $this->db->commit();
+            return true;
+        } catch (\PDOException $e) {
+            $this->db->rollBack();
+            error_log("Merge tours error: " . $e->getMessage());
             return false;
         }
     }
